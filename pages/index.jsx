@@ -1,9 +1,3 @@
-
-─────────────────────────────────────────────────────────────────────
-FILE 3 — pages/api/analyse.js
-(filename: pages/api/analyse.js  ← note the folder, type the slash)
-─────────────────────────────────────────────────────────────────────
-
 import formidable from "formidable";
 import fs from "fs";
 import FormData from "form-data";
