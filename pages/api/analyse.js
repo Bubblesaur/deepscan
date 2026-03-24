@@ -1,5 +1,5 @@
 const FormData = require("form-data");
-const fetch    = require("node-fetch");
+const fetch = require("node-fetch");
 
 export const config = { api: { bodyParser: false } };
 
