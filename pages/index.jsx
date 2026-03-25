@@ -391,8 +391,8 @@ export default function App() {
         @keyframes draw-s { from{stroke-dashoffset:${LINE}} to{stroke-dashoffset:0} }
         @keyframes draw-v { from{stroke-dashoffset:${V_LEN}} to{stroke-dashoffset:0} }
         @keyframes draw-h { from{stroke-dashoffset:${H_LEN}} to{stroke-dashoffset:0} }
-        .scan-line { position:absolute;left:0;right:0;height:2px;background:rgba(55,138,221,0.8);animation:scanline 1.8s linear infinite;pointer-events:none; }
-        .scan-box  { position:absolute;border:1.5px solid rgba(55,138,221,0.65);border-radius:4px;background:rgba(55,138,221,0.1);pointer-events:none;animation:pulsebox 1.4s ease-in-out infinite; }
+        .scan-line { position:absolute;left:0;right:0;height:2px;background:rgba(127,119,221,0.85);animation:scanline 1.8s linear infinite;pointer-events:none; }
+        .scan-box  { position:absolute;border:1.5px solid rgba(127,119,221,0.7);border-radius:4px;background:rgba(127,119,221,0.1);pointer-events:none;animation:pulsebox 1.4s ease-in-out infinite; }
         @media(max-width:700px){ .two-col{ flex-direction:column !important; } .left-col{ position:relative !important; height:auto !important; overflow:visible !important; border-right:none !important; border-bottom:0.5px solid #D3D1C7 !important; } .right-col{ max-height:none !important; overflow:visible !important; } }
       `}</style>
 
