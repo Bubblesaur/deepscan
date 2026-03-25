@@ -304,6 +304,40 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
+function ZoneBox({ z, zoneColor, labelBg }) {
+  const [hovered, setHovered] = useState(false);
+  const top = z.top < 20;
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "absolute", left: `${z.left}%`, top: `${z.top}%`,
+        width: `${z.width}%`, height: `${z.height}%`, borderRadius: 4,
+        border: `1.5px solid ${zoneColor},${hovered ? 0.9 : 0.55})`,
+        background: `${zoneColor},${hovered ? 0.22 : 0.08})`,
+        cursor: "crosshair", transition: "all 0.15s", zIndex: hovered ? 10 : 1,
+      }}>
+      {hovered && (
+        <div style={{
+          position: "absolute",
+          top: top ? "calc(100% + 5px)" : "auto",
+          bottom: top ? "auto" : "calc(100% + 5px)",
+          left: "50%", transform: "translateX(-50%)",
+          background: "#2c2c2a", color: "#F1EFE8",
+          fontSize: 10, lineHeight: 1.5,
+          padding: "5px 8px", borderRadius: 6,
+          whiteSpace: "nowrap", maxWidth: 180,
+          overflow: "hidden", textOverflow: "ellipsis",
+          pointerEvents: "none", zIndex: 20,
+        }}>
+          {z.label}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function IconTrash() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>; }
 function IconSwap() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>; }
 function IconScan() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>; }
