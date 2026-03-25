@@ -114,23 +114,58 @@ function InfoIcon({ text, flipDown }) {
   );
 }
 
+// ── ZoneDot — dot stays pinned at cx/cy, pill flips to avoid edges ────────────
 function ZoneDot({ z, isClean, activeIdx, idx, setActiveIdx }) {
   const isActive = activeIdx === idx, hasActive = activeIdx !== null;
-  const dotColor = isClean ? "#639922" : "#E24B4A";
+  const dotColor  = isClean ? "#639922" : "#E24B4A";
   const ringColor = isClean ? "rgba(99,153,34,0.35)" : "rgba(226,75,74,0.35)";
-  const pillBg = isClean ? "rgba(234,243,222,0.92)" : "rgba(252,235,235,0.92)";
-  const pillBorder = isClean ? "#C0DD97" : "#F09595";
-  const flipLeft = z.cx > 50;
+  const pillBg    = isClean ? "rgba(234,243,222,0.92)" : "rgba(252,235,235,0.92)";
+  const pillBorder= isClean ? "#C0DD97" : "#F09595";
+
+  // Flip pill left when dot is in right 45% to prevent overflow
+  const flipLeft = z.cx > 45;
+  // Drop pill below dot when dot is near the top edge
+  const flipDown = z.cy < 15;
+
   return (
-    <div onClick={e => { e.stopPropagation(); setActiveIdx(i => i === idx ? null : idx); }}
-      onMouseEnter={() => setActiveIdx(idx)} onMouseLeave={() => setActiveIdx(i => i === idx ? null : i)}
-      style={{ position: "absolute", left: `${z.cx}%`, top: `${z.cy}%`, transform: "translate(-50%,-50%)", zIndex: isActive ? 30 : 5, cursor: "pointer", opacity: hasActive && !isActive ? 0.15 : 1, transition: "opacity 0.25s" }}>
+    <div
+      onClick={e => { e.stopPropagation(); setActiveIdx(i => i === idx ? null : idx); }}
+      onMouseEnter={() => setActiveIdx(idx)}
+      onMouseLeave={() => setActiveIdx(i => i === idx ? null : i)}
+      style={{
+        position: "absolute",
+        left: `${z.cx}%`,
+        top: `${z.cy}%`,
+        transform: "translate(-50%,-50%)",
+        zIndex: isActive ? 30 : 5,
+        cursor: "pointer",
+        opacity: hasActive && !isActive ? 0.15 : 1,
+        transition: "opacity 0.25s",
+      }}>
+      {/* Dot — always at exactly cx/cy */}
       <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isActive ? (isClean ? "rgba(99,153,34,0.2)" : "rgba(226,75,74,0.2)") : "transparent", position: "relative" }}>
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1.5px solid ${ringColor}`, animation: "pulse-dot 1.8s ease-in-out infinite", pointerEvents: "none" }} />
         <div style={{ width: 10, height: 10, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
       </div>
+      {/* Pill label — floats beside/below dot, never overlaps it */}
       {!isActive && (
-        <div style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [flipLeft ? "right" : "left"]: 20, fontSize: 10, fontWeight: 500, color: isClean ? "#27500A" : "#791F1F", background: pillBg, border: `0.5px solid ${pillBorder}`, borderRadius: 4, padding: "2px 6px", whiteSpace: "nowrap", pointerEvents: "none" }}>
+        <div style={{
+          position: "absolute",
+          // When near top, drop below; otherwise center vertically beside dot
+          top:       flipDown ? "100%" : "50%",
+          transform: flipDown ? "translateX(-50%)" : "translateY(-50%)",
+          left:      flipDown ? "50%" : (flipLeft ? "auto" : 20),
+          right:     flipDown ? "auto" : (flipLeft ? 20 : "auto"),
+          marginTop: flipDown ? 4 : 0,
+          fontSize: 10, fontWeight: 500,
+          color: isClean ? "#27500A" : "#791F1F",
+          background: pillBg,
+          border: `0.5px solid ${pillBorder}`,
+          borderRadius: 4,
+          padding: "2px 6px",
+          whiteSpace: "nowrap",
+          pointerEvents: "none",
+        }}>
           {toTitleCase(z.label)}
         </div>
       )}
@@ -290,13 +325,13 @@ export default function App() {
   const [boosts,       setBoosts]       = useState({ ...DEFAULT_BOOSTS });
   const [thresholds,   setThresholds]   = useState({ ...DEFAULT_THRESHOLDS });
 
-  const fileRef       = useRef();
-  const replaceRef    = useRef();
+  const fileRef         = useRef();
+  const replaceRef      = useRef();
   const imgContainerRef = useRef();
-  const tickerRef     = useRef(null);
-  const timerRef      = useRef(null);
-  const startRef      = useRef(null);
-  const pendingRef    = useRef(null);
+  const tickerRef       = useRef(null);
+  const timerRef        = useRef(null);
+  const startRef        = useRef(null);
+  const pendingRef      = useRef(null);
 
   useEffect(() => {
     const update = () => {
@@ -373,7 +408,6 @@ export default function App() {
   const totalFlagged = result ? ALL_SIGNALS.filter(s => result.signals?.[s.key]?.detected).length : 0;
   const isClean      = result ? (result.overall_risk_score ?? 0) < thresholds.suspicious : true;
 
-  // Active zone layout
   const activeZoneData = result?.zones?.[activeZone] ?? null;
   const zoneLayout = activeZoneData && imgSize.w > 0 ? calcZoneLayout(activeZoneData, imgSize.w, imgSize.h) : null;
   const lineColor = isClean ? "#3B6D11" : "#666";
@@ -418,8 +452,6 @@ export default function App() {
 
       {/* Body */}
       <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", width: "100%" }}>
-
-        {/* Upload state — centred single column */}
         {!imgUrl && (
           <div style={{ padding: "40px 24px" }}>
             <div onClick={() => fileRef.current.click()} onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={onDrop}
@@ -432,14 +464,11 @@ export default function App() {
           </div>
         )}
 
-        {/* Two-column layout once image is loaded */}
         {imgUrl && (
           <div className="two-col" style={{ display: "flex", height: "calc(100vh - 73px)", overflow: "hidden" }}>
 
-            {/* ── Left column: image (sticky) ── */}
+            {/* Left column */}
             <div className="left-col" style={{ width: "52%", flexShrink: 0, padding: "20px 16px 20px 24px", borderRight: "0.5px solid #D3D1C7", display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
-
-              {/* Image container */}
               <div style={{ background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 12, padding: 10 }}>
                 <div ref={imgContainerRef} style={{ position: "relative", borderRadius: 8, marginBottom: 8 }}>
                   <img src={imgUrl} alt="Uploaded" style={{ width: "100%", display: "block", borderRadius: 8 }} />
@@ -461,11 +490,11 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Zone dots + lines + callout */}
+                  {/* Zone dots — overflow visible so pills never get clipped */}
                   {!loading && !revealing && showHeat && result?.zones?.length > 0 && (() => {
                     const L = zoneLayout;
                     return (
-                      <div onClick={() => setActiveZone(null)} style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "hidden" }}>
+                      <div onClick={() => setActiveZone(null)} style={{ position: "absolute", inset: 0, borderRadius: 8 }}>
                         {L && (
                           <svg key={`svg-${activeZone}`} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 15, overflow: "hidden" }}>
                             {L.mode === "straight" ? (
@@ -496,7 +525,6 @@ export default function App() {
                   })()}
                 </div>
 
-                {/* Image actions */}
                 <div style={{ display: "flex", gap: 8 }}>
                   {result && !loading && (
                     <button onClick={() => { setShowHeat(h => !h); setActiveZone(null); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, padding: "6px 0", cursor: "pointer" }}>
@@ -509,29 +537,23 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Analyse CTA */}
               {!result && !loading && !revealing && (
                 <button onClick={analyse} style={{ width: "100%", padding: "12px", background: "#2c2c2a", color: "#F1EFE8", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
                   Analyse image
                 </button>
               )}
-
-              {/* Re-analyse when result exists */}
               {result && !loading && !revealing && (
                 <button onClick={analyse} style={{ width: "100%", padding: "10px", background: "#fff", color: "#2c2c2a", border: "0.5px solid #D3D1C7", borderRadius: 10, fontSize: 13, cursor: "pointer" }}>
                   Re-analyse
                 </button>
               )}
-
               <p style={{ fontSize: 11, color: "#B4B2A9", textAlign: "center", lineHeight: 1.6 }}>
                 Results are probabilistic and should not be used as sole evidence of authenticity.
               </p>
             </div>
 
-            {/* ── Right column: results (scrollable) ── */}
+            {/* Right column */}
             <div className="right-col" style={{ flex: 1, overflowY: "auto", padding: "20px 24px 40px 16px" }}>
-
-              {/* Loading panel */}
               {loading && !revealing && (
                 <div style={{ background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 12, padding: "16px 16px 10px", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -560,7 +582,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* Reveal flash */}
               {revealing && (
                 <div style={{ background: revealMeta.bg, border: `1.5px solid ${revealMeta.border}`, borderRadius: 12, padding: "36px 16px", textAlign: "center", marginBottom: 10 }}>
                   <div style={{ fontSize: 40, marginBottom: 10, lineHeight: 1 }}>{revealMeta.icon}</div>
@@ -569,7 +590,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* Results */}
               {result && !loading && !revealing && (
                 <>
                   <div style={card}>
@@ -614,7 +634,6 @@ export default function App() {
                 </>
               )}
 
-              {/* Empty right panel before scan */}
               {!result && !loading && !revealing && (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "60%", color: "#B4B2A9", gap: 8 }}>
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D3D1C7" strokeWidth="1.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
