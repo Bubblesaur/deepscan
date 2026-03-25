@@ -418,6 +418,8 @@ export default function App() {
   const [result,       setResult]       = useState(null);
   const [showHeat,     setShowHeat]     = useState(false);
   const [activeZone,   setActiveZone]   = useState(null);
+  const [imgSize,      setImgSize]      = useState({ w: 0, h: 0 });
+  const imgContainerRef = useRef();
   const [copied,       setCopied]       = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [weights,      setWeights]      = useState({ ...DEFAULT_WEIGHTS });
@@ -430,6 +432,19 @@ export default function App() {
   const timerRef   = useRef(null);
   const startRef   = useRef(null);
   const pendingRef = useRef(null);
+
+  useEffect(() => {
+    const update = () => {
+      if (imgContainerRef.current) {
+        const r = imgContainerRef.current.getBoundingClientRect();
+        setImgSize({ w: r.width, h: r.height });
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    if (imgContainerRef.current) ro.observe(imgContainerRef.current);
+    return () => ro.disconnect();
+  }, [imgUrl]);
 
   const processFile = (file) => {
     if (!file || !file.type.startsWith("image/")) return;
@@ -513,8 +528,9 @@ export default function App() {
         @keyframes pulsebox   { 0%,100%{opacity:0.15} 50%{opacity:0.72} }
         @keyframes pulse-dot  { 0%,100%{transform:scale(1);opacity:0.45} 50%{transform:scale(1.7);opacity:0.15} }
         @keyframes fade-callout { from{opacity:0} to{opacity:1} }
-        @keyframes draw-h { from{stroke-dashoffset:100} to{stroke-dashoffset:0} }
-        @keyframes draw-v { from{stroke-dashoffset:60}  to{stroke-dashoffset:0} }
+        @keyframes draw-s { from{stroke-dashoffset:48} to{stroke-dashoffset:0} }
+        @keyframes draw-v { from{stroke-dashoffset:36} to{stroke-dashoffset:0} }
+        @keyframes draw-h { from{stroke-dashoffset:44} to{stroke-dashoffset:0} }
         .scan-line { position:absolute; left:0; right:0; height:2px; background:rgba(55,138,221,0.8); animation:scanline 1.8s linear infinite; pointer-events:none; }
         .scan-box  { position:absolute; border:1.5px solid rgba(55,138,221,0.65); border-radius:4px; background:rgba(55,138,221,0.1); pointer-events:none; animation:pulsebox 1.4s ease-in-out infinite; }
       `}</style>
