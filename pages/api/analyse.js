@@ -125,7 +125,7 @@ Examine this image carefully and respond ONLY with a valid JSON object in this e
 Rules:
 - overall_risk_score: weight Sightengine scores heavily (AI ${aiPct}%, deepfake ${dfPct}%) but also factor in your own forensic observations
 - top_concerns: only include if overall_risk_score >= 35, otherwise return []
-- zones: always return 2–4 zones pinpointing the most notable regions in THIS image — whether anomalies or authenticity markers. Clamp: left+width ≤ 88, top+height ≤ 88
+- zones: always return 2–4 zones pinpointing the most notable regions in THIS image. Each zone must be spatially distinct — no two zones should overlap. Spread them across different parts of the image (e.g. top-left, top-right, bottom-left, bottom-right). Clamp: left+width ≤ 88, top+height ≤ 88
 - For each signal, base detected/confidence on what you actually observe in the image
 - detail must be one specific, concrete sentence about what you see (or don't see) in this image` }
           ]
