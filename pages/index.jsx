@@ -304,35 +304,93 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
-function ZoneBox({ z, zoneColor, labelBg }) {
-  const [hovered, setHovered] = useState(false);
-  const top = z.top < 20;
+function ZoneDot({ z, isClean, activeIdx, idx, setActiveIdx }) {
+  const isActive = activeIdx === idx;
+  const dotColor = isClean ? "#639922" : "#E24B4A";
+  const ringColor = isClean ? "rgba(99,153,34,0.35)" : "rgba(226,75,74,0.35)";
+  const calloutBg = isClean ? "#EAF3DE" : "#FCEBEB";
+  const calloutBorder = isClean ? "#C0DD97" : "#F09595";
+  const titleColor = isClean ? "#27500A" : "#A32D2D";
+  const bodyColor = isClean ? "#3B6D11" : "#791F1F";
+
+  const flipLeft = z.cx > 55;
+  const flipUp   = z.cy > 55;
+
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => setActiveIdx(idx)}
+      onMouseLeave={() => setActiveIdx(i => i === idx ? null : i)}
+      onClick={() => setActiveIdx(i => i === idx ? null : idx)}
       style={{
-        position: "absolute", left: `${z.left}%`, top: `${z.top}%`,
-        width: `${z.width}%`, height: `${z.height}%`, borderRadius: 4,
-        border: `1.5px solid ${zoneColor},${hovered ? 0.9 : 0.55})`,
-        background: `${zoneColor},${hovered ? 0.22 : 0.08})`,
-        cursor: "crosshair", transition: "all 0.15s", zIndex: hovered ? 10 : 1,
+        position: "absolute",
+        left: `${z.cx}%`, top: `${z.cy}%`,
+        transform: "translate(-50%, -50%)",
+        zIndex: isActive ? 20 : 5,
+        cursor: "pointer",
       }}>
-      {hovered && (
+
+      {/* Pulsing ring */}
+      <style>{`
+        @keyframes pulse-dot {
+          0%,100% { transform: scale(1); opacity: 0.45; }
+          50%      { transform: scale(1.7); opacity: 0.15; }
+        }
+      `}</style>
+      <div style={{
+        width: 22, height: 22, borderRadius: "50%",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: isActive ? (isClean ? "rgba(99,153,34,0.2)" : "rgba(226,75,74,0.2)") : "transparent",
+        position: "relative",
+      }}>
+        {/* Animated ring */}
         <div style={{
-          position: "absolute",
-          top: top ? "calc(100% + 5px)" : "auto",
-          bottom: top ? "auto" : "calc(100% + 5px)",
-          left: "50%", transform: "translateX(-50%)",
-          background: "#2c2c2a", color: "#F1EFE8",
-          fontSize: 10, lineHeight: 1.5,
-          padding: "5px 8px", borderRadius: 6,
-          whiteSpace: "nowrap", maxWidth: 180,
-          overflow: "hidden", textOverflow: "ellipsis",
-          pointerEvents: "none", zIndex: 20,
-        }}>
-          {z.label}
-        </div>
+          position: "absolute", inset: 0, borderRadius: "50%",
+          border: `1.5px solid ${ringColor}`,
+          animation: "pulse-dot 1.8s ease-in-out infinite",
+          pointerEvents: "none",
+        }} />
+        {/* Solid dot */}
+        <div style={{ width: 10, height: 10, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+      </div>
+
+      {/* Short label beside dot */}
+      <div style={{
+        position: "absolute", top: "50%", transform: "translateY(-50%)",
+        [flipLeft ? "right" : "left"]: 26,
+        fontSize: 10, fontWeight: 500, color: titleColor,
+        whiteSpace: "nowrap", pointerEvents: "none",
+        textShadow: "0 0 4px #F1EFE8, 0 0 4px #F1EFE8",
+      }}>
+        {z.label}
+      </div>
+
+      {/* Callout + connector */}
+      {isActive && (
+        <>
+          {/* Dashed SVG connector line */}
+          <svg style={{ position: "absolute", top: "50%", left: "50%", overflow: "visible", pointerEvents: "none", zIndex: 15 }} width="0" height="0">
+            <line
+              x1="0" y1="0"
+              x2={flipLeft ? -110 : 110}
+              y2={flipUp  ? -40  : 40}
+              stroke="#B4B2A9" strokeWidth="1" strokeDasharray="4 3"
+            />
+          </svg>
+
+          {/* Callout card */}
+          <div style={{
+            position: "absolute",
+            [flipLeft ? "right" : "left"]: flipLeft ? 30 : 30,
+            [flipUp   ? "bottom" : "top"]: flipUp   ? 30 : 30,
+            background: calloutBg,
+            border: `0.5px solid ${calloutBorder}`,
+            borderRadius: 8, padding: "8px 10px",
+            width: 170, zIndex: 20, pointerEvents: "none",
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 500, color: titleColor, margin: "0 0 3px" }}>{z.label}</p>
+            <p style={{ fontSize: 10, color: bodyColor, lineHeight: 1.55, margin: 0 }}>{z.detail || z.label}</p>
+          </div>
+        </>
       )}
     </div>
   );
@@ -366,7 +424,7 @@ export default function App() {
   const [boosts,      setBoosts]      = useState({ ...DEFAULT_BOOSTS });
   const [thresholds,  setThresholds]  = useState({ ...DEFAULT_THRESHOLDS });
 
-  const fileRef    = useRef();
+  const [activeZone, setActiveZone] = useState(null);
   const replaceRef = useRef();
   const tickerRef  = useRef(null);
   const timerRef   = useRef(null);
