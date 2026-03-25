@@ -206,5 +206,7 @@ Rules:
     top_concerns:       claudeResult.top_concerns ?? [],
     signals:            claudeResult.signals       ?? {},
     zones,
+    se_ai:  Math.round(ai * 100),
+    se_df:  Math.round(df * 100),
   });
 }
