@@ -475,11 +475,15 @@ export default function App() {
                 )}
                 {!loading && !revealing && showHeat && result?.zones?.length > 0 && (
                   <div style={{ position: "absolute", inset: 0, borderRadius: 8 }}>
-                    {result.zones.map((z, i) => (
-                      <div key={i} style={{ position: "absolute", left: `${z.left}%`, top: `${z.top}%`, width: `${z.width}%`, height: `${z.height}%`, borderRadius: 4, border: "1.5px solid rgba(226,75,74,0.65)", background: "rgba(226,75,74,0.13)" }}>
-                        <span style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 3, fontSize: 9, color: "rgba(255,255,255,0.95)", background: "rgba(163,45,45,0.8)", borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis" }}>{z.label}</span>
-                      </div>
-                    ))}
+                    {result.zones.map((z, i) => {
+                        const isClean = (result.overall_risk_score ?? 0) < thresholds.suspicious;
+                        const zoneColor = isClean ? "rgba(99,153,34" : "rgba(226,75,74";
+                        return (
+                          <div key={i} style={{ position: "absolute", left: `${z.left}%`, top: `${z.top}%`, width: `${z.width}%`, height: `${z.height}%`, borderRadius: 4, border: `1.5px solid ${zoneColor},0.65)`, background: `${zoneColor},0.13)` }}>
+                            <span style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 3, fontSize: 9, color: "rgba(255,255,255,0.95)", background: isClean ? "rgba(59,109,17,0.8)" : "rgba(163,45,45,0.8)", borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis" }}>{z.label}</span>
+                          </div>
+                        );
+                      })}
                     <div style={{ position: "absolute", bottom: 7, right: 9, fontSize: 9, color: "rgba(255,255,255,0.9)", background: "rgba(44,44,42,0.55)", borderRadius: 4, padding: "2px 7px" }}>Suspicious regions highlighted</div>
                   </div>
                 )}
