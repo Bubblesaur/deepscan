@@ -125,7 +125,7 @@ Examine this image carefully and respond ONLY with a valid JSON object in this e
 Rules:
 - overall_risk_score: weight Sightengine scores heavily (AI ${aiPct}%, deepfake ${dfPct}%) but also factor in your own forensic observations
 - top_concerns: only include if overall_risk_score >= 35, otherwise return []
-- zones: only include if overall_risk_score >= 50, otherwise return []. 2–4 zones pinpointing actual anomalies. Clamp: left+width ≤ 88, top+height ≤ 88
+- zones: only include if overall_risk_score >= 35, otherwise return []. 2–4 zones pinpointing actual anomalies. Clamp: left+width ≤ 88, top+height ≤ 88
 - For each signal, base detected/confidence on what you actually observe in the image
 - detail must be one specific, concrete sentence about what you see (or don't see) in this image` }
           ]
