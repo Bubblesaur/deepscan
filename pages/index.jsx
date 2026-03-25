@@ -184,7 +184,7 @@ function SignalRow({ label, finding, info, isLast }) {
 function GroupCard({ group, color, signals, results }) {
   const flagged = signals.filter(s => results?.[s.key]?.detected).length;
   return (
-    <div style={{ border: "0.5px solid #D3D1C7", borderRadius: 12, overflow: "visible", marginBottom: 10 }}>
+    <div style={{ border: "0.5px solid #D3D1C7", borderRadius: 12, overflow: "visible", marginBottom: 10, position: "relative" }}>
       <div style={{ background: color.bg, borderBottom: `0.5px solid ${color.border}`, padding: "8px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: "12px 12px 0 0" }}>
         <span style={{ fontSize: 13, fontWeight: 500, color: color.text }}>{group}</span>
         {flagged > 0
@@ -456,7 +456,7 @@ export default function App() {
         ) : (
           <>
             <div style={{ ...card, padding: 10 }}>
-              <div style={{ position: "relative", borderRadius: 8, overflow: "hidden", marginBottom: 8 }}>
+              <div style={{ position: "relative", borderRadius: 8, overflow: "hidden", marginBottom: 8, isolation: "isolate" }}>
                 <img src={imgUrl} alt="Uploaded" style={{ width: "100%", display: "block", borderRadius: 8 }} />
                 {loading && !revealing && (
                   <div style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "hidden" }}>
