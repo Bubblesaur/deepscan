@@ -5,34 +5,33 @@ export const config = { api: { bodyParser: false } };
 
 // ── Facial landmark lookup table ──────────────────────────────────────────────
 // cx = horizontal % from left, cy = vertical % from top
-// These are approximate positions for a front-facing portrait
 const REGIONS = {
-  left_eye:        { cx: 35, cy: 36 },
-  right_eye:       { cx: 65, cy: 36 },
-  left_eyebrow:    { cx: 33, cy: 28 },
-  right_eyebrow:   { cx: 67, cy: 28 },
-  nose_tip:        { cx: 50, cy: 55 },
-  nose_bridge:     { cx: 50, cy: 44 },
-  left_cheek:      { cx: 24, cy: 56 },
-  right_cheek:     { cx: 76, cy: 56 },
-  mouth:           { cx: 50, cy: 68 },
-  upper_lip:       { cx: 50, cy: 64 },
-  lower_lip:       { cx: 50, cy: 72 },
-  chin:            { cx: 50, cy: 84 },
-  jaw_left:        { cx: 18, cy: 72 },
-  jaw_right:       { cx: 82, cy: 72 },
-  forehead:        { cx: 50, cy: 16 },
-  forehead_left:   { cx: 33, cy: 16 },
-  forehead_right:  { cx: 67, cy: 16 },
-  hair_top:        { cx: 50, cy:  6 },
-  hair_left:       { cx: 18, cy: 22 },
-  hair_right:      { cx: 82, cy: 22 },
-  left_ear:        { cx:  8, cy: 48 },
-  right_ear:       { cx: 92, cy: 48 },
-  neck:            { cx: 50, cy: 93 },
-  background_left: { cx:  8, cy: 30 },
-  background_right:{ cx: 92, cy: 30 },
-  background_top:  { cx: 50, cy:  5 },
+  left_eye:         { cx: 38, cy: 42 },
+  right_eye:        { cx: 62, cy: 42 },
+  left_eyebrow:     { cx: 37, cy: 36 },
+  right_eyebrow:    { cx: 63, cy: 36 },
+  nose_tip:         { cx: 50, cy: 58 },
+  nose_bridge:      { cx: 50, cy: 48 },
+  left_cheek:       { cx: 32, cy: 58 },
+  right_cheek:      { cx: 68, cy: 58 },
+  mouth:            { cx: 50, cy: 70 },
+  upper_lip:        { cx: 50, cy: 66 },
+  lower_lip:        { cx: 50, cy: 73 },
+  chin:             { cx: 50, cy: 83 },
+  jaw_left:         { cx: 26, cy: 75 },
+  jaw_right:        { cx: 74, cy: 75 },
+  forehead:         { cx: 50, cy: 28 },
+  forehead_left:    { cx: 38, cy: 28 },
+  forehead_right:   { cx: 62, cy: 28 },
+  hair_top:         { cx: 50, cy: 10 },
+  hair_left:        { cx: 24, cy: 30 },
+  hair_right:       { cx: 76, cy: 30 },
+  left_ear:         { cx: 18, cy: 55 },
+  right_ear:        { cx: 82, cy: 55 },
+  neck:             { cx: 50, cy: 92 },
+  background_left:  { cx: 10, cy: 40 },
+  background_right: { cx: 90, cy: 40 },
+  background_top:   { cx: 50, cy:  8 },
 };
 
 function getRawBody(req) {
@@ -106,7 +105,6 @@ export default async function handler(req, res) {
   const b64   = fileBuffer.toString("base64");
   const aiPct = Math.round(ai * 100);
   const dfPct = Math.round(df * 100);
-
   const regionKeys = Object.keys(REGIONS).join(", ");
 
   let claudeResult = {};
@@ -140,7 +138,7 @@ Examine this image carefully and respond ONLY with a valid JSON object in this e
     "gan_fingerprint":   { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "synthetic_texture": { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "face_swap":         { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
-    "face_reenactment":  { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
+    "face_reenactment":  { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence about facial expression or mouth region manipulation visible in this image>" },
     "edge_blending":     { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "skin_smoothing":    { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "lighting_mismatch": { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
@@ -162,13 +160,14 @@ Examine this image carefully and respond ONLY with a valid JSON object in this e
 }
 
 Rules:
-- overall_risk_score: weight Sightengine scores heavily (AI ${aiPct}%, deepfake ${dfPct}%) but also factor in your own forensic observations
+- overall_risk_score: use a BALANCED approach — weight Sightengine (AI ${aiPct}%, deepfake ${dfPct}%) at 50% and your own forensic visual assessment at 50%. If Sightengine scores are low but you observe clear AI artifacts, score HIGH. If Sightengine scores are high but the image looks authentic, score MODERATE. Never let Sightengine alone drive the score.
 - top_concerns: only include if overall_risk_score >= 35, otherwise return []
 - Always return 2–4 zones
-- For each zone, pick the single best matching region key from the list above that describes WHERE the anomaly is
+- For each zone pick the single best matching region key from: ${regionKeys}
 - Each zone must use a different region key — no duplicates
 - detail must be a specific 1-sentence observation about what you see at that exact facial feature
-- For each signal, base detected/confidence on what you actually observe in the image` }
+- For each signal, base detected/confidence on what you actually observe in the image
+- detail for each signal must be one specific, concrete sentence about what you see (or don't see) in this image` }
           ]
         }]
       })
@@ -200,6 +199,7 @@ Rules:
   });
 
   console.log("Final zones:", JSON.stringify(zones));
+
   return res.status(200).json({
     overall_risk_score: claudeResult.overall_risk_score ?? Math.round((ai + df) / 2 * 100),
     finding:            claudeResult.finding      ?? "Analysis unavailable.",
