@@ -55,7 +55,7 @@ const ALL_SIGNALS = SIGNAL_GROUPS.flatMap(g => g.signals);
 const STEPS = [
   { label: "Uploading image",        detail: "Sending your image securely to the analysis server" },
   { label: "Scanning for artifacts", detail: "Checking for AI generation signatures from MidJourney, DALL-E, Stable Diffusion and more" },
-  { key: "Deepfake analysis",        detail: "Looking for face swaps, skin texture anomalies and edge blending" },
+  { label: "Deepfake analysis",      detail: "Looking for face swaps, skin texture anomalies and edge blending" },
   { label: "Forensic review",        detail: "Claude is examining lighting, geometry, hair detail and compression patterns" },
   { label: "Building report",        detail: "Compiling risk score, signal findings and suspicious region markers" },
 ];
@@ -304,9 +304,14 @@ export default function App() {
                   <div style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "hidden" }}>
                     <div style={{ position: "absolute", inset: 0, background: "rgba(44,44,42,0.32)" }} />
                     <div className="scan-line" />
-                    {step >= 1 && <div className="scan-box" style={{ left: "8%",  top: "6%",  width: "36%", height: "46%", animationDelay: "0s" }} />}
-                    {step >= 2 && <div className="scan-box" style={{ left: "55%", top: "5%",  width: "30%", height: "28%", animationDelay: "0.35s" }} />}
-                    {step >= 3 && <div className="scan-box" style={{ left: "18%", top: "60%", width: "55%", height: "24%", animationDelay: "0.7s" }} />}
+                    {step >= 1 && <div className="scan-box" style={{ left: "28%", top: "5%",  width: "22%", height: "18%", animationDelay: "0s" }} />}
+                    {step >= 1 && <div className="scan-box" style={{ left: "10%", top: "18%", width: "30%", height: "22%", animationDelay: "0.2s" }} />}
+                    {step >= 1 && <div className="scan-box" style={{ left: "55%", top: "10%", width: "28%", height: "20%", animationDelay: "0.4s" }} />}
+                    {step >= 2 && <div className="scan-box" style={{ left: "20%", top: "38%", width: "22%", height: "16%", animationDelay: "0.1s" }} />}
+                    {step >= 2 && <div className="scan-box" style={{ left: "48%", top: "30%", width: "25%", height: "18%", animationDelay: "0.5s" }} />}
+                    {step >= 2 && <div className="scan-box" style={{ left: "15%", top: "58%", width: "30%", height: "15%", animationDelay: "0.3s" }} />}
+                    {step >= 3 && <div className="scan-box" style={{ left: "55%", top: "52%", width: "28%", height: "18%", animationDelay: "0.6s" }} />}
+                    {step >= 3 && <div className="scan-box" style={{ left: "32%", top: "72%", width: "35%", height: "14%", animationDelay: "0.2s" }} />}
                     <div style={{ position: "absolute", bottom: 7, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", fontSize: 10, color: "rgba(255,255,255,0.92)", background: "rgba(44,44,42,0.65)", borderRadius: 4, padding: "2px 8px" }}>
                       {STEPS[step]?.label}
                     </div>
