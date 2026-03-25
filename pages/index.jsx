@@ -24,7 +24,7 @@ const SIGNAL_GROUPS = [
     info: "Increases the weight of face swap, reenactment and blending signals. Set to High if deepfakes are your primary concern.",
     signals: [
       { key: "face_swap",        label: "Face swap detected",          info: "Detects whether a face in the image has been replaced with another person's likeness using AI face-swapping techniques." },
-      { key: "face_reenactment", label: "Face reenactment / lip sync", info: "Identifies manipulation of facial expressions or lip movements, commonly used in video deepfakes and AI-dubbed content." },
+      { key: "face_reenactment", label: "Face reenactment",            info: "Identifies manipulation of facial expressions or mouth regions, commonly used to alter the appearance of speech in AI-generated portraits." },
       { key: "edge_blending",    label: "Unnatural edge blending",     info: "Looks for soft or inconsistent boundaries around the face where a swap or composite has been blended into the background." },
       { key: "skin_smoothing",   label: "Excessive skin smoothing",    info: "Flags skin that is unnaturally uniform or poreless — a side effect of AI face generators and heavy deepfake post-processing." },
     ],
@@ -49,10 +49,10 @@ const SIGNAL_GROUPS = [
     dot: "#BA7517",
     info: "Weights low-level pixel and encoding signals. Most useful as a secondary check — not reliable alone but adds confidence when combined with other signals.",
     signals: [
-      { key: "compression",   label: "Compression artifact pattern", info: "Detects unnatural JPEG block patterns that appear when AI images are post-processed or re-saved multiple times." },
-      { key: "noise_pattern", label: "Unnatural noise distribution",  info: "Real camera images have characteristic sensor noise. AI images often lack this or show synthetic noise patterns that don't match real cameras." },
-      { key: "color_space",   label: "Color space anomaly",           info: "Checks for unexpected colour space inconsistencies that can result from AI image post-processing pipelines." },
-      { key: "aspect_ratio",  label: "Non-standard aspect ratio",     info: "Flags images with aspect ratios commonly output by AI generators (e.g. 1:1, 4:3 at exact pixel counts) that differ from standard camera outputs." },
+      { key: "compression",   label: "Compression artifact pattern", info: "Detects unnatural JPEG block patterns that appear when AI images are post-processed or re-saved." },
+      { key: "noise_pattern", label: "Unnatural noise distribution",  info: "Real camera images have characteristic sensor noise. AI images often lack this or show synthetic noise that doesn't match real cameras." },
+      { key: "color_space",   label: "Color space anomaly",           info: "Checks for unexpected colour space inconsistencies that result from AI image post-processing pipelines." },
+      { key: "aspect_ratio",  label: "Non-standard aspect ratio",     info: "Flags images with aspect ratios commonly output by AI generators that differ from standard camera outputs." },
     ],
   },
 ];
