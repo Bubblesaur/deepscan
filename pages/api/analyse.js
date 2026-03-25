@@ -70,7 +70,7 @@ export default async function handler(req, res) {
   }
 
   // ── 2. Claude ─────────────────────────────────────────────────────
-  const b64 = fileBuffer.toString("base64");
+  const b64   = fileBuffer.toString("base64");
   const aiPct = Math.round(ai * 100);
   const dfPct = Math.round(df * 100);
 
@@ -118,16 +118,19 @@ Examine this image carefully and respond ONLY with a valid JSON object in this e
     "aspect_ratio":      { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" }
   },
   "zones": [
-    { "label": "<2–4 word label>", "left": <int 5–72>, "top": <int 5–72>, "width": <int 15–38>, "height": <int 10–32> }
+    { "label": "<2–4 word label>", "cx": <int 8–88>, "cy": <int 8–88>, "detail": "<1 sentence forensic explanation for this specific spot>" }
   ]
 }
 
 Rules:
 - overall_risk_score: weight Sightengine scores heavily (AI ${aiPct}%, deepfake ${dfPct}%) but also factor in your own forensic observations
 - top_concerns: only include if overall_risk_score >= 35, otherwise return []
-- zones: always return 2–4 zones pinpointing the most notable regions in THIS image. Each zone must be spatially distinct — no two zones should overlap. Spread them across different parts of the image (e.g. top-left, top-right, bottom-left, bottom-right). Clamp: left+width ≤ 88, top+height ≤ 88
+- Always return 2–4 zones as dot markers (centre points, not rectangles)
+- Each zone must be spatially distinct — spread across different areas of the image (e.g. top-left face, top-right eye, lower cheek, background)
+- cx is horizontal % from left, cy is vertical % from top
+- detail must be a specific 1-sentence observation about what is visible at that exact spot
 - For each signal, base detected/confidence on what you actually observe in the image
-- detail must be one specific, concrete sentence about what you see (or don't see) in this image` }
+- detail for each signal must be one specific, concrete sentence about what you see (or don't see) in this image` }
           ]
         }]
       })
@@ -148,9 +151,9 @@ Rules:
 
   return res.status(200).json({
     overall_risk_score: claudeResult.overall_risk_score ?? Math.round((ai + df) / 2 * 100),
-    finding:            claudeResult.finding     ?? "Analysis unavailable.",
+    finding:            claudeResult.finding      ?? "Analysis unavailable.",
     top_concerns:       claudeResult.top_concerns ?? [],
-    signals:            claudeResult.signals      ?? {},
-    zones:              claudeResult.zones         ?? [],
+    signals:            claudeResult.signals       ?? {},
+    zones:              claudeResult.zones          ?? [],
   });
 }
