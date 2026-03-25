@@ -20,11 +20,11 @@ export default async function handler(req, res) {
 async function checkSightengine() {
   try {
     const res = await fetch(
-      `https://api.sightengine.com/1.0/check.json?models=genai&api_user=${process.env.SIGHTENGINE_API_USER}&api_secret=${process.env.SIGHTENGINE_API_SECRET}&url=https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/240px-PNG_transparency_demonstration_1.png`,
+      `https://api.sightengine.com/1.0/check.json?models=genai&api_user=${process.env.SIGHTENGINE_API_USER}&api_secret=${process.env.SIGHTENGINE_API_SECRET}&url=https://sightengine.com/assets/img/examples/example7.jpg`,
       { method: "GET" }
     );
     const data = await res.json();
-    return data?.status === "success";
+    return data?.status === "success" || data?.type != null;
   } catch {
     return false;
   }
