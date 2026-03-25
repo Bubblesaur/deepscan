@@ -23,10 +23,10 @@ const SIGNAL_GROUPS = [
     dot: "#D85A30",
     info: "Increases the weight of face swap, reenactment and blending signals. Set to High if deepfakes are your primary concern.",
     signals: [
-      { key: "face_swap",        label: "Face swap detected",          info: "Detects whether a face in the image has been replaced with another person's likeness using AI face-swapping techniques." },
-      { key: "face_reenactment", label: "Face reenactment",            info: "Identifies manipulation of facial expressions or mouth regions, commonly used to alter the appearance of speech in AI-generated portraits." },
-      { key: "edge_blending",    label: "Unnatural edge blending",     info: "Looks for soft or inconsistent boundaries around the face where a swap or composite has been blended into the background." },
-      { key: "skin_smoothing",   label: "Excessive skin smoothing",    info: "Flags skin that is unnaturally uniform or poreless — a side effect of AI face generators and heavy deepfake post-processing." },
+      { key: "face_swap",        label: "Face swap detected",     info: "Detects whether a face in the image has been replaced with another person's likeness using AI face-swapping techniques." },
+      { key: "face_reenactment", label: "Face reenactment",       info: "Identifies manipulation of facial expressions or mouth regions, commonly used to alter the appearance of speech in AI-generated portraits." },
+      { key: "edge_blending",    label: "Unnatural edge blending",info: "Looks for soft or inconsistent boundaries around the face where a swap or composite has been blended into the background." },
+      { key: "skin_smoothing",   label: "Excessive skin smoothing",info: "Flags skin that is unnaturally uniform or poreless — a side effect of AI face generators and heavy deepfake post-processing." },
     ],
   },
   {
@@ -36,10 +36,10 @@ const SIGNAL_GROUPS = [
     dot: "#1D9E75",
     info: "Weights forensic visual cues like lighting, catch-lights, hair edges and background seams. Useful for catching subtle AI portraits that pass basic checks.",
     signals: [
-      { key: "lighting_mismatch", label: "Lighting inconsistency",      info: "Checks whether the direction, colour temperature and shadow pattern of the lighting is consistent across the face and background." },
-      { key: "catch_light",       label: "Missing / cloned catch-lights",info: "Real eyes reflect light sources as unique catch-lights. AI images often clone identical reflections in both eyes or omit them entirely." },
-      { key: "hair_detail",       label: "Hair edge anomaly",            info: "Examines hair boundaries for the characteristic blur or dissolve that occurs when AI models struggle to render fine strands against backgrounds." },
-      { key: "background_seam",   label: "Background seam or artifact", info: "Looks for discontinuities or unnatural transitions where the subject meets the background, which can indicate compositing or AI generation." },
+      { key: "lighting_mismatch", label: "Lighting inconsistency",       info: "Checks whether the direction, colour temperature and shadow pattern of the lighting is consistent across the face and background." },
+      { key: "catch_light",       label: "Missing / cloned catch-lights", info: "Real eyes reflect light sources as unique catch-lights. AI images often clone identical reflections in both eyes or omit them entirely." },
+      { key: "hair_detail",       label: "Hair edge anomaly",             info: "Examines hair boundaries for the characteristic blur or dissolve that occurs when AI models struggle to render fine strands against backgrounds." },
+      { key: "background_seam",   label: "Background seam or artifact",  info: "Looks for discontinuities or unnatural transitions where the subject meets the background, which can indicate compositing or AI generation." },
     ],
   },
   {
@@ -57,12 +57,11 @@ const SIGNAL_GROUPS = [
   },
 ];
 
-const ALL_SIGNALS = SIGNAL_GROUPS.flatMap(g => g.signals);
-const DEFAULT_WEIGHTS = { ai_generation: "med", face_manipulation: "high", forensic_cues: "med", metadata: "low" };
-const DEFAULT_BOOSTS  = { face_swap: true, synthetic_texture: true };
+const ALL_SIGNALS    = SIGNAL_GROUPS.flatMap(g => g.signals);
+const DEFAULT_WEIGHTS    = { ai_generation: "med", face_manipulation: "high", forensic_cues: "med", metadata: "low" };
+const DEFAULT_BOOSTS     = { face_swap: true, synthetic_texture: true };
 const DEFAULT_THRESHOLDS = { suspicious: 55, high: 70 };
 
-// ── Loading steps ─────────────────────────────────────────────────────────────
 const STEPS = [
   { label: "Uploading image",        detail: "Sending your image securely to the analysis server" },
   { label: "Scanning for artifacts", detail: "Checking for AI generation signatures from MidJourney, DALL-E, Stable Diffusion and more" },
@@ -71,7 +70,8 @@ const STEPS = [
   { label: "Building report",        detail: "Compiling risk score, signal findings and suspicious region markers" },
 ];
 
-// ── Small components ──────────────────────────────────────────────────────────
+// ── Small reusable components ─────────────────────────────────────────────────
+
 function AnimatedEllipsis({ label }) {
   const [dots, setDots] = useState("");
   useEffect(() => {
@@ -84,40 +84,57 @@ function AnimatedEllipsis({ label }) {
 function InfoIcon({ text, flipDown }) {
   const [show, setShow] = useState(false);
   return (
-    <div
-      style={{ position: "relative", flexShrink: 0 }}
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      <div style={{
-        width: 16, height: 16, borderRadius: "50%",
-        border: `1px solid ${show ? "#2c2c2a" : "#B4B2A9"}`,
-        background: show ? "#F1EFE8" : "#fff",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 9, fontWeight: 500, color: show ? "#2c2c2a" : "#888780",
-        cursor: "pointer", transition: "all 0.15s",
-      }}>i</div>
+    <div style={{ position: "relative", flexShrink: 0 }} onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <div style={{ width: 16, height: 16, borderRadius: "50%", border: `1px solid ${show ? "#2c2c2a" : "#B4B2A9"}`, background: show ? "#F1EFE8" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 500, color: show ? "#2c2c2a" : "#888780", cursor: "pointer", transition: "all 0.15s" }}>i</div>
       {show && (
-        <div style={{
-          position: "absolute",
-          right: 22,
-          top: flipDown ? "auto" : -6,
-          bottom: flipDown ? -6 : "auto",
-          background: "#2c2c2a", color: "#F1EFE8",
-          fontSize: 11, lineHeight: 1.55,
-          padding: "8px 10px", borderRadius: 8,
-          width: 200, zIndex: 50, pointerEvents: "none",
-        }}>
+        <div style={{ position: "absolute", right: 22, top: flipDown ? "auto" : -6, bottom: flipDown ? -6 : "auto", background: "#2c2c2a", color: "#F1EFE8", fontSize: 11, lineHeight: 1.55, padding: "8px 10px", borderRadius: 8, width: 200, zIndex: 50, pointerEvents: "none" }}>
           {text}
-          <div style={{
-            position: "absolute", right: -5,
-            top: flipDown ? "auto" : 12, bottom: flipDown ? 12 : "auto",
-            width: 0, height: 0,
-            borderTop: "4px solid transparent",
-            borderBottom: "4px solid transparent",
-            borderLeft: "5px solid #2c2c2a",
-          }} />
+          <div style={{ position: "absolute", right: -5, top: flipDown ? "auto" : 12, bottom: flipDown ? 12 : "auto", width: 0, height: 0, borderTop: "4px solid transparent", borderBottom: "4px solid transparent", borderLeft: "5px solid #2c2c2a" }} />
         </div>
+      )}
+    </div>
+  );
+}
+
+function ZoneDot({ z, isClean, activeIdx, idx, setActiveIdx }) {
+  const isActive  = activeIdx === idx;
+  const dotColor  = isClean ? "#639922"              : "#E24B4A";
+  const ringColor = isClean ? "rgba(99,153,34,0.35)" : "rgba(226,75,74,0.35)";
+  const calloutBg     = isClean ? "#EAF3DE" : "#FCEBEB";
+  const calloutBorder = isClean ? "#C0DD97" : "#F09595";
+  const titleColor    = isClean ? "#27500A" : "#A32D2D";
+  const bodyColor     = isClean ? "#3B6D11" : "#791F1F";
+  const flipLeft = z.cx > 55;
+  const flipUp   = z.cy > 55;
+
+  return (
+    <div
+      onMouseEnter={() => setActiveIdx(idx)}
+      onMouseLeave={() => setActiveIdx(i => i === idx ? null : i)}
+      onClick={() => setActiveIdx(i => i === idx ? null : idx)}
+      style={{ position: "absolute", left: `${z.cx}%`, top: `${z.cy}%`, transform: "translate(-50%, -50%)", zIndex: isActive ? 20 : 5, cursor: "pointer" }}>
+
+      <style>{`@keyframes pulse-dot { 0%,100%{transform:scale(1);opacity:0.45} 50%{transform:scale(1.7);opacity:0.15} }`}</style>
+
+      <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isActive ? (isClean ? "rgba(99,153,34,0.2)" : "rgba(226,75,74,0.2)") : "transparent", position: "relative" }}>
+        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1.5px solid ${ringColor}`, animation: "pulse-dot 1.8s ease-in-out infinite", pointerEvents: "none" }} />
+        <div style={{ width: 10, height: 10, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+      </div>
+
+      <div style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [flipLeft ? "right" : "left"]: 26, fontSize: 10, fontWeight: 500, color: titleColor, whiteSpace: "nowrap", pointerEvents: "none", textShadow: "0 0 4px #F1EFE8, 0 0 4px #F1EFE8" }}>
+        {z.label}
+      </div>
+
+      {isActive && (
+        <>
+          <svg style={{ position: "absolute", top: "50%", left: "50%", overflow: "visible", pointerEvents: "none", zIndex: 15 }} width="0" height="0">
+            <line x1="0" y1="0" x2={flipLeft ? -110 : 110} y2={flipUp ? -40 : 40} stroke="#B4B2A9" strokeWidth="1" strokeDasharray="4 3" />
+          </svg>
+          <div style={{ position: "absolute", [flipLeft ? "right" : "left"]: 30, [flipUp ? "bottom" : "top"]: 30, background: calloutBg, border: `0.5px solid ${calloutBorder}`, borderRadius: 8, padding: "8px 10px", width: 170, zIndex: 20, pointerEvents: "none" }}>
+            <p style={{ fontSize: 11, fontWeight: 500, color: titleColor, margin: "0 0 3px" }}>{z.label}</p>
+            <p style={{ fontSize: 10, color: bodyColor, lineHeight: 1.55, margin: 0 }}>{z.detail || z.label}</p>
+          </div>
+        </>
       )}
     </div>
   );
@@ -129,11 +146,7 @@ function RiskBadge({ score, thresholds }) {
     : score >= thresholds.suspicious
     ? ["Medium risk", { bg: "#FAEEDA", border: "#BA7517", text: "#854F0B" }]
     : ["Low risk",    { bg: "#EAF3DE", border: "#639922", text: "#3B6D11" }];
-  return (
-    <span style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text, borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 500 }}>
-      {lvl}
-    </span>
-  );
+  return <span style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text, borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 500 }}>{lvl}</span>;
 }
 
 function ScoreBar({ score }) {
@@ -210,15 +223,8 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
       high: active ? { bg: "#FCEBEB", border: "#F09595", text: "#791F1F" } : null,
     };
     const c = styles[level];
-    return {
-      padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 500, cursor: "pointer",
-      border: `0.5px solid ${c ? c.border : "#D3D1C7"}`,
-      background: c ? c.bg : "#F1EFE8",
-      color: c ? c.text : "#888780",
-      transition: "all 0.15s",
-    };
+    return { padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 500, cursor: "pointer", border: `0.5px solid ${c ? c.border : "#D3D1C7"}`, background: c ? c.bg : "#F1EFE8", color: c ? c.text : "#888780", transition: "all 0.15s" };
   };
-
   const row = { display: "flex", alignItems: "center", gap: 8, padding: "9px 0", borderBottom: "0.5px solid #F1EFE8" };
   const sectionLabel = { fontSize: 9, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "#888780", marginBottom: 8 };
 
@@ -237,7 +243,6 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
           </button>
         </div>
 
-        {/* Group weights */}
         <div style={{ padding: "14px 20px 0" }}>
           <p style={sectionLabel}>Signal group weights</p>
           {SIGNAL_GROUPS.map(g => (
@@ -256,7 +261,6 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
           ))}
         </div>
 
-        {/* Individual signal boosts */}
         <div style={{ padding: "14px 20px 0", borderTop: "0.5px solid #F1EFE8", marginTop: 10 }}>
           <p style={sectionLabel}>Boost individual signals</p>
           {ALL_SIGNALS.map((s, i) => (
@@ -264,8 +268,7 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
               <span style={{ flex: 1, fontSize: 12, color: "#5F5E5A" }}>{s.label}</span>
               {boosts[s.key] && <span style={{ fontSize: 9, background: "#FAEEDA", color: "#854F0B", border: "0.5px solid #FAC775", borderRadius: 4, padding: "1px 5px" }}>Boosted</span>}
               <InfoIcon text={s.info} flipDown={i > ALL_SIGNALS.length - 5} />
-              <div
-                onClick={() => onBoosts({ ...boosts, [s.key]: !boosts[s.key] })}
+              <div onClick={() => onBoosts({ ...boosts, [s.key]: !boosts[s.key] })}
                 style={{ width: 32, height: 18, borderRadius: 99, background: boosts[s.key] ? "#2c2c2a" : "#D3D1C7", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background 0.2s" }}>
                 <div style={{ width: 14, height: 14, background: "#fff", borderRadius: "50%", position: "absolute", top: 2, left: boosts[s.key] ? 16 : 2, transition: "left 0.2s" }} />
               </div>
@@ -273,21 +276,17 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
           ))}
         </div>
 
-        {/* Thresholds */}
         <div style={{ padding: "14px 20px 0", borderTop: "0.5px solid #F1EFE8", marginTop: 10 }}>
           <p style={sectionLabel}>Risk thresholds</p>
           {[{ key: "suspicious", label: "Flag as suspicious" }, { key: "high", label: "Flag as high risk" }].map(t => (
             <div key={t.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: t.key === "suspicious" ? "0.5px solid #F1EFE8" : "none" }}>
               <span style={{ fontSize: 12, color: "#5F5E5A", width: 130, flexShrink: 0 }}>{t.label}</span>
-              <input type="range" min="1" max="99" step="1" value={thresholds[t.key]}
-                onChange={e => onThresholds({ ...thresholds, [t.key]: Number(e.target.value) })}
-                style={{ flex: 1 }} />
+              <input type="range" min="1" max="99" step="1" value={thresholds[t.key]} onChange={e => onThresholds({ ...thresholds, [t.key]: Number(e.target.value) })} style={{ flex: 1 }} />
               <span style={{ fontSize: 12, fontWeight: 500, color: "#2c2c2a", minWidth: 28, textAlign: "right" }}>{thresholds[t.key]}</span>
             </div>
           ))}
         </div>
 
-        {/* Footer */}
         <div style={{ display: "flex", gap: 8, padding: "16px 20px 0" }}>
           <button onClick={() => { onWeights({ ...DEFAULT_WEIGHTS }); onBoosts({ ...DEFAULT_BOOSTS }); onThresholds({ ...DEFAULT_THRESHOLDS }); }}
             style={{ flex: 1, padding: "10px", background: "#F1EFE8", border: "0.5px solid #D3D1C7", borderRadius: 10, fontSize: 13, color: "#5F5E5A", cursor: "pointer" }}>
@@ -304,127 +303,36 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
-function ZoneDot({ z, isClean, activeIdx, idx, setActiveIdx }) {
-  const isActive = activeIdx === idx;
-  const dotColor = isClean ? "#639922" : "#E24B4A";
-  const ringColor = isClean ? "rgba(99,153,34,0.35)" : "rgba(226,75,74,0.35)";
-  const calloutBg = isClean ? "#EAF3DE" : "#FCEBEB";
-  const calloutBorder = isClean ? "#C0DD97" : "#F09595";
-  const titleColor = isClean ? "#27500A" : "#A32D2D";
-  const bodyColor = isClean ? "#3B6D11" : "#791F1F";
-
-  const flipLeft = z.cx > 55;
-  const flipUp   = z.cy > 55;
-
-  return (
-    <div
-      onMouseEnter={() => setActiveIdx(idx)}
-      onMouseLeave={() => setActiveIdx(i => i === idx ? null : i)}
-      onClick={() => setActiveIdx(i => i === idx ? null : idx)}
-      style={{
-        position: "absolute",
-        left: `${z.cx}%`, top: `${z.cy}%`,
-        transform: "translate(-50%, -50%)",
-        zIndex: isActive ? 20 : 5,
-        cursor: "pointer",
-      }}>
-
-      {/* Pulsing ring */}
-      <style>{`
-        @keyframes pulse-dot {
-          0%,100% { transform: scale(1); opacity: 0.45; }
-          50%      { transform: scale(1.7); opacity: 0.15; }
-        }
-      `}</style>
-      <div style={{
-        width: 22, height: 22, borderRadius: "50%",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        background: isActive ? (isClean ? "rgba(99,153,34,0.2)" : "rgba(226,75,74,0.2)") : "transparent",
-        position: "relative",
-      }}>
-        {/* Animated ring */}
-        <div style={{
-          position: "absolute", inset: 0, borderRadius: "50%",
-          border: `1.5px solid ${ringColor}`,
-          animation: "pulse-dot 1.8s ease-in-out infinite",
-          pointerEvents: "none",
-        }} />
-        {/* Solid dot */}
-        <div style={{ width: 10, height: 10, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
-      </div>
-
-      {/* Short label beside dot */}
-      <div style={{
-        position: "absolute", top: "50%", transform: "translateY(-50%)",
-        [flipLeft ? "right" : "left"]: 26,
-        fontSize: 10, fontWeight: 500, color: titleColor,
-        whiteSpace: "nowrap", pointerEvents: "none",
-        textShadow: "0 0 4px #F1EFE8, 0 0 4px #F1EFE8",
-      }}>
-        {z.label}
-      </div>
-
-      {/* Callout + connector */}
-      {isActive && (
-        <>
-          {/* Dashed SVG connector line */}
-          <svg style={{ position: "absolute", top: "50%", left: "50%", overflow: "visible", pointerEvents: "none", zIndex: 15 }} width="0" height="0">
-            <line
-              x1="0" y1="0"
-              x2={flipLeft ? -110 : 110}
-              y2={flipUp  ? -40  : 40}
-              stroke="#B4B2A9" strokeWidth="1" strokeDasharray="4 3"
-            />
-          </svg>
-
-          {/* Callout card */}
-          <div style={{
-            position: "absolute",
-            [flipLeft ? "right" : "left"]: flipLeft ? 30 : 30,
-            [flipUp   ? "bottom" : "top"]: flipUp   ? 30 : 30,
-            background: calloutBg,
-            border: `0.5px solid ${calloutBorder}`,
-            borderRadius: 8, padding: "8px 10px",
-            width: 170, zIndex: 20, pointerEvents: "none",
-          }}>
-            <p style={{ fontSize: 11, fontWeight: 500, color: titleColor, margin: "0 0 3px" }}>{z.label}</p>
-            <p style={{ fontSize: 10, color: bodyColor, lineHeight: 1.55, margin: 0 }}>{z.detail || z.label}</p>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function IconTrash() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>; }
-function IconSwap() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>; }
-function IconScan() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>; }
-function IconUpload() { return <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#B4B2A9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>; }
+function IconTrash()    { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>; }
+function IconSwap()     { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>; }
+function IconScan()     { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>; }
+function IconUpload()   { return <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#B4B2A9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>; }
 function IconSettings() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F5E5A" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>; }
 
-const card = { background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 12, padding: "12px 14px", marginBottom: 10 };
+const card      = { background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 12, padding: "12px 14px", marginBottom: 10 };
 const cardLabel = { fontSize: 10, letterSpacing: "0.07em", textTransform: "uppercase", color: "#888780", marginBottom: 8, fontWeight: 500 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [imgUrl,      setImgUrl]      = useState(null);
-  const [imgB64,      setImgB64]      = useState(null);
-  const [imgMime,     setImgMime]     = useState("image/jpeg");
-  const [drag,        setDrag]        = useState(false);
-  const [loading,     setLoading]     = useState(false);
-  const [revealing,   setRevealing]   = useState(false);
-  const [step,        setStep]        = useState(0);
-  const [elapsed,     setElapsed]     = useState(0);
-  const [estimate,    setEstimate]    = useState(12);
-  const [result,      setResult]      = useState(null);
-  const [showHeat,    setShowHeat]    = useState(false);
-  const [copied,      setCopied]      = useState(false);
-  const [showSettings,setShowSettings]= useState(false);
-  const [weights,     setWeights]     = useState({ ...DEFAULT_WEIGHTS });
-  const [boosts,      setBoosts]      = useState({ ...DEFAULT_BOOSTS });
-  const [thresholds,  setThresholds]  = useState({ ...DEFAULT_THRESHOLDS });
+  const [imgUrl,       setImgUrl]       = useState(null);
+  const [imgB64,       setImgB64]       = useState(null);
+  const [imgMime,      setImgMime]      = useState("image/jpeg");
+  const [drag,         setDrag]         = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [revealing,    setRevealing]    = useState(false);
+  const [step,         setStep]         = useState(0);
+  const [elapsed,      setElapsed]      = useState(0);
+  const [estimate,     setEstimate]     = useState(12);
+  const [result,       setResult]       = useState(null);
+  const [showHeat,     setShowHeat]     = useState(false);
+  const [activeZone,   setActiveZone]   = useState(null);
+  const [copied,       setCopied]       = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [weights,      setWeights]      = useState({ ...DEFAULT_WEIGHTS });
+  const [boosts,       setBoosts]       = useState({ ...DEFAULT_BOOSTS });
+  const [thresholds,   setThresholds]   = useState({ ...DEFAULT_THRESHOLDS });
 
-  const [activeZone, setActiveZone] = useState(null);
+  const fileRef    = useRef();
   const replaceRef = useRef();
   const tickerRef  = useRef(null);
   const timerRef   = useRef(null);
@@ -435,7 +343,7 @@ export default function App() {
     if (!file || !file.type.startsWith("image/")) return;
     setImgMime(file.type || "image/jpeg");
     const r = new FileReader();
-    r.onload = (e) => { setImgUrl(e.target.result); setImgB64(e.target.result.split(",")[1]); setResult(null); setShowHeat(false); };
+    r.onload = (e) => { setImgUrl(e.target.result); setImgB64(e.target.result.split(",")[1]); setResult(null); setShowHeat(false); setActiveZone(null); };
     r.readAsDataURL(file);
   };
 
@@ -447,7 +355,7 @@ export default function App() {
     const avg = history.length ? Math.round(history.reduce((a, b) => a + b, 0) / history.length) : 12;
     setEstimate(avg);
     startRef.current = Date.now();
-    setLoading(true); setResult(null); setShowHeat(false);
+    setLoading(true); setResult(null); setShowHeat(false); setActiveZone(null);
     setStep(0); setElapsed(0); setRevealing(false);
 
     let s = 0;
@@ -486,7 +394,12 @@ export default function App() {
     }
   };
 
-  const reset = () => { setImgUrl(null); setImgB64(null); setResult(null); setShowHeat(false); setLoading(false); setRevealing(false); setStep(0); clearInterval(tickerRef.current); clearInterval(timerRef.current); };
+  const reset = () => {
+    setImgUrl(null); setImgB64(null); setResult(null);
+    setShowHeat(false); setActiveZone(null);
+    setLoading(false); setRevealing(false); setStep(0);
+    clearInterval(tickerRef.current); clearInterval(timerRef.current);
+  };
 
   const remaining  = Math.max(0, estimate - elapsed);
   const pct        = Math.min((elapsed / estimate) * 100, 100);
@@ -499,6 +412,7 @@ export default function App() {
     : { bg: "#EAF3DE", color: "#3B6D11", border: "#C0DD97", icon: "✓", text: "Looks mostly clean" };
 
   const totalFlagged = result ? ALL_SIGNALS.filter(s => result.signals?.[s.key]?.detected).length : 0;
+  const isClean      = result ? (result.overall_risk_score ?? 0) < thresholds.suspicious : true;
 
   return (
     <div style={{ background: "#F1EFE8", minHeight: "100vh", padding: "0 0 40px" }}>
@@ -510,11 +424,9 @@ export default function App() {
       `}</style>
 
       {showSettings && (
-        <SettingsPanel
-          weights={weights} boosts={boosts} thresholds={thresholds}
+        <SettingsPanel weights={weights} boosts={boosts} thresholds={thresholds}
           onWeights={setWeights} onBoosts={setBoosts} onThresholds={setThresholds}
-          onClose={() => setShowSettings(false)}
-        />
+          onClose={() => setShowSettings(false)} />
       )}
 
       {/* Header */}
@@ -547,9 +459,12 @@ export default function App() {
           </div>
         ) : (
           <>
+            {/* Image card */}
             <div style={{ ...card, padding: 10 }}>
               <div style={{ position: "relative", borderRadius: 8, overflow: "hidden", marginBottom: 8, isolation: "isolate" }}>
                 <img src={imgUrl} alt="Uploaded" style={{ width: "100%", display: "block", borderRadius: 8 }} />
+
+                {/* Scan animation */}
                 {loading && !revealing && (
                   <div style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "hidden" }}>
                     <div style={{ position: "absolute", inset: 0, background: "rgba(44,44,42,0.32)" }} />
@@ -565,34 +480,37 @@ export default function App() {
                     <div style={{ position: "absolute", bottom: 7, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", fontSize: 10, color: "rgba(255,255,255,0.92)", background: "rgba(44,44,42,0.65)", borderRadius: 4, padding: "2px 8px" }}>{STEPS[step]?.label}</div>
                   </div>
                 )}
+
+                {/* Zone dots */}
                 {!loading && !revealing && showHeat && result?.zones?.length > 0 && (
-                  <div style={{ position: "absolute", inset: 0, borderRadius: 8 }}>
-                    {result.zones.map((z, i) => {
-                        const isClean = (result.overall_risk_score ?? 0) < thresholds.suspicious;
-                        const zoneColor = isClean ? "rgba(99,153,34" : "rgba(226,75,74";
-                        const labelBg   = isClean ? "rgba(59,109,17,0.9)" : "rgba(163,45,45,0.9)";
-                        return (
-                          <ZoneBox key={i} z={z} zoneColor={zoneColor} labelBg={labelBg} />
-                        );
-                      })}
-                    <div style={{ position: "absolute", bottom: 7, right: 9, fontSize: 9, color: "rgba(255,255,255,0.9)", background: "rgba(44,44,42,0.55)", borderRadius: 4, padding: "2px 7px" }}>Suspicious regions highlighted</div>
+                  <div style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "visible" }}>
+                    {result.zones.map((z, i) => (
+                      <ZoneDot key={i} idx={i} z={z} isClean={isClean} activeIdx={activeZone} setActiveIdx={setActiveZone} />
+                    ))}
                   </div>
                 )}
               </div>
+
               <div style={{ display: "flex", gap: 8 }}>
-                {result && !loading && <button onClick={() => setShowHeat(h => !h)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, padding: "6px 0", cursor: "pointer" }}><IconScan />{showHeat ? "Hide heatmap" : "Show heatmap"}</button>}
+                {result && !loading && (
+                  <button onClick={() => { setShowHeat(h => !h); setActiveZone(null); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, padding: "6px 0", cursor: "pointer" }}>
+                    <IconScan />{showHeat ? "Hide heatmap" : "Show heatmap"}
+                  </button>
+                )}
                 <button onClick={() => replaceRef.current.click()} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, padding: "6px 0", cursor: "pointer" }}><IconSwap />Replace</button>
                 <button onClick={reset} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, padding: "6px 0", color: "#A32D2D", cursor: "pointer" }}><IconTrash />Remove</button>
                 <input ref={replaceRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => processFile(e.target.files[0])} />
               </div>
             </div>
 
+            {/* Analyse CTA */}
             {!result && !loading && !revealing && (
               <button onClick={analyse} style={{ display: "block", width: "100%", padding: "11px", background: "#2c2c2a", color: "#F1EFE8", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: "pointer", marginBottom: 10 }}>
                 Analyse image
               </button>
             )}
 
+            {/* Loading panel */}
             {loading && !revealing && (
               <div style={{ background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 12, padding: "16px 16px 10px", marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -605,9 +523,9 @@ export default function App() {
                   <div style={{ height: "100%", background: "#534AB7", borderRadius: 2, transition: "width 0.8s ease", width: `${pct}%` }} />
                 </div>
                 {STEPS.map((s, i) => {
-                  const done = i < step, active = i === step, pending = i > step;
+                  const done = i < step, active = i === step, pend = i > step;
                   return (
-                    <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "5px 0", opacity: pending ? 0.35 : 1, transition: "opacity 0.3s" }}>
+                    <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "5px 0", opacity: pend ? 0.35 : 1, transition: "opacity 0.3s" }}>
                       <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, background: done ? "#EAF3DE" : active ? "#EEEDFE" : "#F1EFE8", border: `1.5px solid ${done ? "#639922" : active ? "#7F77DD" : "#D3D1C7"}`, color: done ? "#3B6D11" : active ? "#534AB7" : "#888780", transition: "all 0.3s" }}>
                         {done ? "✓" : active ? "◌" : ""}
                       </div>
@@ -621,6 +539,7 @@ export default function App() {
               </div>
             )}
 
+            {/* Reveal flash */}
             {revealing && (
               <div style={{ background: revealMeta.bg, border: `1.5px solid ${revealMeta.border}`, borderRadius: 12, padding: "28px 16px", textAlign: "center", marginBottom: 10 }}>
                 <div style={{ fontSize: 36, marginBottom: 10, lineHeight: 1 }}>{revealMeta.icon}</div>
@@ -629,6 +548,7 @@ export default function App() {
               </div>
             )}
 
+            {/* Results */}
             {result && !loading && !revealing && (
               <>
                 <div style={card}>
