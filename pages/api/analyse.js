@@ -3,6 +3,38 @@ const fetch = require("node-fetch");
 
 export const config = { api: { bodyParser: false } };
 
+// ── Facial landmark lookup table ──────────────────────────────────────────────
+// cx = horizontal % from left, cy = vertical % from top
+// These are approximate positions for a front-facing portrait
+const REGIONS = {
+  left_eye:        { cx: 35, cy: 36 },
+  right_eye:       { cx: 65, cy: 36 },
+  left_eyebrow:    { cx: 33, cy: 28 },
+  right_eyebrow:   { cx: 67, cy: 28 },
+  nose_tip:        { cx: 50, cy: 55 },
+  nose_bridge:     { cx: 50, cy: 44 },
+  left_cheek:      { cx: 24, cy: 56 },
+  right_cheek:     { cx: 76, cy: 56 },
+  mouth:           { cx: 50, cy: 68 },
+  upper_lip:       { cx: 50, cy: 64 },
+  lower_lip:       { cx: 50, cy: 72 },
+  chin:            { cx: 50, cy: 84 },
+  jaw_left:        { cx: 18, cy: 72 },
+  jaw_right:       { cx: 82, cy: 72 },
+  forehead:        { cx: 50, cy: 16 },
+  forehead_left:   { cx: 33, cy: 16 },
+  forehead_right:  { cx: 67, cy: 16 },
+  hair_top:        { cx: 50, cy:  6 },
+  hair_left:       { cx: 18, cy: 22 },
+  hair_right:      { cx: 82, cy: 22 },
+  left_ear:        { cx:  8, cy: 48 },
+  right_ear:       { cx: 92, cy: 48 },
+  neck:            { cx: 50, cy: 93 },
+  background_left: { cx:  8, cy: 30 },
+  background_right:{ cx: 92, cy: 30 },
+  background_top:  { cx: 50, cy:  5 },
+};
+
 function getRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -53,7 +85,7 @@ export default async function handler(req, res) {
   if (fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50) mimeType = "image/png";
   else if (fileBuffer[0] === 0x52 && fileBuffer[1] === 0x49) mimeType = "image/webp";
 
-  // ── 1. Sightengine ────────────────────────────────────────────────
+  // ── 1. Sightengine ────────────────────────────────────────────────────────
   let ai = 0.1, df = 0.1;
   try {
     const seForm = new FormData();
@@ -69,10 +101,12 @@ export default async function handler(req, res) {
     console.error("Sightengine error:", err.message);
   }
 
-  // ── 2. Claude ─────────────────────────────────────────────────────
+  // ── 2. Claude ─────────────────────────────────────────────────────────────
   const b64   = fileBuffer.toString("base64");
   const aiPct = Math.round(ai * 100);
   const dfPct = Math.round(df * 100);
+
+  const regionKeys = Object.keys(REGIONS).join(", ");
 
   let claudeResult = {};
   try {
@@ -105,7 +139,7 @@ Examine this image carefully and respond ONLY with a valid JSON object in this e
     "gan_fingerprint":   { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "synthetic_texture": { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "face_swap":         { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
-    "face_reenactment":  { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence about facial expression or mouth region manipulation visible in this image>" },
+    "face_reenactment":  { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "edge_blending":     { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "skin_smoothing":    { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "lighting_mismatch": { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
@@ -118,21 +152,22 @@ Examine this image carefully and respond ONLY with a valid JSON object in this e
     "aspect_ratio":      { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" }
   },
   "zones": [
-    { "label": "<2–4 word label>", "cx": <int 8–88>, "cy": <int 8–88>, "detail": "<1 sentence forensic explanation for this specific spot>" }
+    {
+      "label": "<2–4 word label>",
+      "region": "<one of: ${regionKeys}>",
+      "detail": "<1 sentence forensic explanation for this specific spot>"
+    }
   ]
 }
 
 Rules:
 - overall_risk_score: weight Sightengine scores heavily (AI ${aiPct}%, deepfake ${dfPct}%) but also factor in your own forensic observations
 - top_concerns: only include if overall_risk_score >= 35, otherwise return []
-- Always return 2–4 zones as dot markers (centre points, not rectangles)
-- Each zone must be spatially distinct — spread across different areas of the image
-- cx is horizontal % from left (0=left edge, 50=centre, 100=right edge), cy is vertical % from top (0=top edge, 50=middle, 100=bottom edge)
-- For facial images, use these approximate landmark coordinates as reference: left eye cx≈35 cy≈38, right eye cx≈65 cy≈38, nose tip cx≈50 cy≈58, mouth cx≈50 cy≈70, left cheek cx≈25 cy≈55, right cheek cx≈75 cy≈55, forehead cx≈50 cy≈18, chin cx≈50 cy≈82, left hairline cx≈28 cy≈12, right hairline cx≈72 cy≈12
-- Place the dot AT the feature, not beside it — if the anomaly is the left eye, cx should be ~35 and cy ~38
-- detail must be a specific 1-sentence observation about what is visible at that exact spot
-- For each signal, base detected/confidence on what you actually observe in the image
-- detail for each signal must be one specific, concrete sentence about what you see (or don't see) in this image` }
+- Always return 2–4 zones
+- For each zone, pick the single best matching region key from the list above that describes WHERE the anomaly is
+- Each zone must use a different region key — no duplicates
+- detail must be a specific 1-sentence observation about what you see at that exact facial feature
+- For each signal, base detected/confidence on what you actually observe in the image` }
           ]
         }]
       })
@@ -151,11 +186,22 @@ Rules:
     };
   }
 
+  // ── 3. Resolve region names → coordinates ────────────────────────────────
+  const zones = (claudeResult.zones ?? []).map(z => {
+    const coords = REGIONS[z.region] ?? REGIONS["forehead"];
+    return {
+      label:  z.label,
+      detail: z.detail,
+      cx:     coords.cx,
+      cy:     coords.cy,
+    };
+  });
+
   return res.status(200).json({
     overall_risk_score: claudeResult.overall_risk_score ?? Math.round((ai + df) / 2 * 100),
     finding:            claudeResult.finding      ?? "Analysis unavailable.",
     top_concerns:       claudeResult.top_concerns ?? [],
     signals:            claudeResult.signals       ?? {},
-    zones:              claudeResult.zones          ?? [],
+    zones,
   });
 }
