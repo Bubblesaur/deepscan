@@ -72,6 +72,49 @@ const STEPS = [
 
 const toTitleCase = s => s.replace(/\b\w/g, c => c.toUpperCase());
 
+const BOX_W = 185;
+const BOX_H = 94;
+const LINE  = 48;
+const V_LEN = 36;
+const H_LEN = 44;
+const ZPAD  = 6;
+const DOT_R = 11;
+
+function calcZoneLayout(dot, IW, IH) {
+  const dx = (dot.cx / 100) * IW;
+  const dy = (dot.cy / 100) * IH;
+
+  const spaceR = IW - (dx + DOT_R) - ZPAD;
+  const spaceL = (dx - DOT_R) - ZPAD;
+  const fitsR  = spaceR >= LINE + BOX_W;
+  const fitsL  = spaceL >= LINE + BOX_W;
+
+  if (fitsR || fitsL) {
+    const goRight = fitsR && (!fitsL || spaceR >= spaceL);
+    const lx1 = goRight ? dx + DOT_R : dx - DOT_R;
+    const lx2 = goRight ? lx1 + LINE : lx1 - LINE;
+    const ly  = dy;
+    let bx = goRight ? lx2 : lx2 - BOX_W;
+    const roomAbove = ly - BOX_H - ZPAD >= 0;
+    let by = roomAbove ? ly - BOX_H : ly;
+    bx = Math.max(ZPAD, Math.min(bx, IW - BOX_W - ZPAD));
+    by = Math.max(ZPAD, Math.min(by, IH - BOX_H - ZPAD));
+    return { mode: "straight", dx, dy, lx1, ly, lx2, bx, by };
+  }
+
+  // Perpendicular fallback
+  const goDown   = (IH - dy) >= dy;
+  const goRight2 = (IW - dx) >= dx;
+  const vx1 = dx, vy1 = dy, vx2 = dx;
+  const vy2 = goDown ? dy + V_LEN : dy - V_LEN;
+  const hx2 = goRight2 ? vx2 + H_LEN : vx2 - H_LEN;
+  let bx = goRight2 ? hx2 : hx2 - BOX_W;
+  let by = goDown   ? vy2  : vy2 - BOX_H;
+  bx = Math.max(ZPAD, Math.min(bx, IW - BOX_W - ZPAD));
+  by = Math.max(ZPAD, Math.min(by, IH - BOX_H - ZPAD));
+  return { mode: "perp", dx, dy, vx1, vy1, vx2, vy2, hx1: vx2, hy1: vy2, hx2, hy2: vy2, bx, by };
+}
+
 // ── Components ────────────────────────────────────────────────────────────────
 
 function AnimatedEllipsis({ label }) {
@@ -518,10 +561,10 @@ export default function App() {
           <>
             {/* Image card */}
             <div style={{ ...card, padding: 10 }}>
-              <div style={{ position: "relative", borderRadius: 8, overflow: "hidden", marginBottom: 8, isolation: "isolate" }}>
+              <div style={{ position: "relative", borderRadius: 8, marginBottom: 8 }}>
                 <img src={imgUrl} alt="Uploaded" style={{ width: "100%", display: "block", borderRadius: 8 }} />
 
-                {/* Scan animation */}
+                {/* Scan animation — clipped to image bounds */}
                 {loading && !revealing && (
                   <div style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "hidden" }}>
                     <div style={{ position: "absolute", inset: 0, background: "rgba(44,44,42,0.32)" }} />
