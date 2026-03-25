@@ -385,7 +385,7 @@ export default function App() {
       setTimeout(() => {
         setRevealing(false); setLoading(false);
         setResult(pendingRef.current);
-        setShowHeat((pendingRef.current.overall_risk_score ?? 0) >= thresholds.high && (pendingRef.current.zones?.length ?? 0) > 0);
+        setShowHeat((pendingRef.current.zones?.length ?? 0) > 0);
       }, 1800);
     } catch (err) {
       clearInterval(tickerRef.current); clearInterval(timerRef.current);
