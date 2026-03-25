@@ -130,9 +130,9 @@ function ZoneDot({ z, isClean, activeIdx, idx, setActiveIdx }) {
           <svg style={{ position: "absolute", top: "50%", left: "50%", overflow: "visible", pointerEvents: "none", zIndex: 15 }} width="0" height="0">
             <line x1="0" y1="0" x2={flipLeft ? -110 : 110} y2={flipUp ? -40 : 40} stroke="#B4B2A9" strokeWidth="1" strokeDasharray="4 3" />
           </svg>
-          <div style={{ position: "absolute", [flipLeft ? "right" : "left"]: 30, [flipUp ? "bottom" : "top"]: 30, background: calloutBg, border: `0.5px solid ${calloutBorder}`, borderRadius: 8, padding: "8px 10px", width: 170, zIndex: 20, pointerEvents: "none" }}>
-            <p style={{ fontSize: 11, fontWeight: 500, color: titleColor, margin: "0 0 3px" }}>{z.label}</p>
-            <p style={{ fontSize: 10, color: bodyColor, lineHeight: 1.55, margin: 0 }}>{z.detail || z.label}</p>
+          <div style={{ position: "absolute", [flipLeft ? "right" : "left"]: 30, [flipUp ? "bottom" : "top"]: 30, background: "#fff", border: `1px solid ${calloutBorder}`, borderRadius: 10, padding: "10px 12px", width: 185, zIndex: 20, pointerEvents: "none" }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: titleColor, margin: "0 0 4px" }}>{z.label}</p>
+            <p style={{ fontSize: 12, color: "#2c2c2a", lineHeight: 1.6, margin: 0 }}>{z.detail || z.label}</p>
           </div>
         </>
       )}
