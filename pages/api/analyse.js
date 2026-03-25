@@ -127,7 +127,7 @@ Rules:
 - top_concerns: only include if overall_risk_score >= 35, otherwise return []
 - Always return 2–4 zones as dot markers (centre points, not rectangles)
 - Each zone must be spatially distinct — spread across different areas of the image (e.g. top-left face, top-right eye, lower cheek, background)
-- cx is horizontal % from left, cy is vertical % from top
+- cx is horizontal % from left, cy is vertical % from top — place the dot at the EXACT pixel center of the anomaly (e.g. pupil center for an eye issue, the precise hairline edge for hair anomalies, the center of the affected skin patch). Do NOT place dots in empty space adjacent to the feature.
 - detail must be a specific 1-sentence observation about what is visible at that exact spot
 - For each signal, base detected/confidence on what you actually observe in the image
 - detail for each signal must be one specific, concrete sentence about what you see (or don't see) in this image` }
