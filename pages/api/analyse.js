@@ -199,6 +199,7 @@ Rules:
     };
   });
 
+  console.log("Final zones:", JSON.stringify(zones));
   return res.status(200).json({
     overall_risk_score: claudeResult.overall_risk_score ?? Math.round((ai + df) / 2 * 100),
     finding:            claudeResult.finding      ?? "Analysis unavailable.",
