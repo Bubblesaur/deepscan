@@ -325,6 +325,8 @@ export default function App() {
   const [boosts,       setBoosts]       = useState({ ...DEFAULT_BOOSTS });
   const [thresholds,   setThresholds]   = useState({ ...DEFAULT_THRESHOLDS });
 
+  const [health, setHealth] = useState(null); // null=checking, {status,se,claude}=done
+
   const fileRef         = useRef();
   const replaceRef      = useRef();
   const imgContainerRef = useRef();
@@ -345,6 +347,13 @@ export default function App() {
     if (imgContainerRef.current) ro.observe(imgContainerRef.current);
     return () => ro.disconnect();
   }, [imgUrl]);
+
+  useEffect(() => {
+    fetch("/api/health")
+      .then(r => r.json())
+      .then(d => setHealth(d))
+      .catch(() => setHealth({ status: "down", se: false, claude: false }));
+  }, []);
 
   const processFile = (file) => {
     if (!file || !file.type.startsWith("image/")) return;
@@ -452,8 +461,72 @@ export default function App() {
 
       {/* Body */}
       <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+        {/* Health check banner */}
         {!imgUrl && (
-          <div style={{ padding: "40px 24px" }}>
+          <div style={{ padding: "16px 24px 0" }}>
+            {health === null && (
+              <div style={{ background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#D3D1C7", flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: "#888780" }}>Checking detection services…</span>
+              </div>
+            )}
+            {health?.status === "ok" && (
+              <div style={{ background: "#EAF3DE", border: "0.5px solid #C0DD97", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#639922", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: "#27500A" }}>All systems operational</div>
+                  <div style={{ fontSize: 11, color: "#3B6D11" }}>Sightengine + Claude ready</div>
+                </div>
+              </div>
+            )}
+            {health?.status === "degraded" && (
+              <div style={{ background: "#FAEEDA", border: "0.5px solid #FAC775", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF9F27", flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "#633806" }}>Degraded — Sightengine unavailable</div>
+                    <div style={{ fontSize: 11, color: "#854F0B" }}>Scans will rely on Claude visual analysis only</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <div style={{ flex: 1, background: "#fff", border: `0.5px solid ${health.se ? "#C0DD97" : "#FAC775"}`, borderRadius: 6, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: health.se ? "#639922" : "#EF9F27", flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: health.se ? "#27500A" : "#633806" }}>Sightengine</span>
+                    <span style={{ fontSize: 10, color: health.se ? "#3B6D11" : "#854F0B", marginLeft: "auto" }}>{health.se ? "online" : "offline"}</span>
+                  </div>
+                  <div style={{ flex: 1, background: "#fff", border: `0.5px solid ${health.claude ? "#C0DD97" : "#FAC775"}`, borderRadius: 6, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: health.claude ? "#639922" : "#EF9F27", flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: health.claude ? "#27500A" : "#633806" }}>Claude</span>
+                    <span style={{ fontSize: 10, color: health.claude ? "#3B6D11" : "#854F0B", marginLeft: "auto" }}>{health.claude ? "online" : "offline"}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {health?.status === "down" && (
+              <div style={{ background: "#FCEBEB", border: "0.5px solid #F09595", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#E24B4A", flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "#791F1F" }}>Service unavailable</div>
+                    <div style={{ fontSize: 11, color: "#A32D2D" }}>Scans are paused until services recover</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[{ label: "Sightengine", ok: health.se }, { label: "Claude", ok: health.claude }].map(s => (
+                    <div key={s.label} style={{ flex: 1, background: "#fff", border: `0.5px solid ${s.ok ? "#C0DD97" : "#F09595"}`, borderRadius: 6, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.ok ? "#639922" : "#E24B4A", flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, color: s.ok ? "#27500A" : "#791F1F" }}>{s.label}</span>
+                      <span style={{ fontSize: 10, color: s.ok ? "#3B6D11" : "#A32D2D", marginLeft: "auto" }}>{s.ok ? "online" : "offline"}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!imgUrl && (
+          <div style={{ padding: "0 24px 40px" }}>
             <div onClick={() => fileRef.current.click()} onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={onDrop}
               style={{ border: `1.5px dashed ${drag ? "#378ADD" : "#B4B2A9"}`, borderRadius: 16, padding: "64px 40px", textAlign: "center", cursor: "pointer", background: drag ? "#E6F1FB" : "#e8e7e2", transition: "background 0.15s, border-color 0.15s", maxWidth: 560, margin: "0 auto" }}>
               <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><IconUpload /></div>
