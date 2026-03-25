@@ -4,7 +4,6 @@ const fetch = require("node-fetch");
 export const config = { api: { bodyParser: false } };
 
 // ── Facial landmark lookup table ──────────────────────────────────────────────
-// cx = horizontal % from left, cy = vertical % from top
 const REGIONS = {
   left_eye:         { cx: 38, cy: 42 },
   right_eye:        { cx: 62, cy: 42 },
@@ -102,9 +101,9 @@ export default async function handler(req, res) {
   }
 
   // ── 2. Claude ─────────────────────────────────────────────────────────────
-  const b64   = fileBuffer.toString("base64");
-  const aiPct = Math.round(ai * 100);
-  const dfPct = Math.round(df * 100);
+  const b64        = fileBuffer.toString("base64");
+  const aiPct      = Math.round(ai * 100);
+  const dfPct      = Math.round(df * 100);
   const regionKeys = Object.keys(REGIONS).join(", ");
 
   let claudeResult = {};
@@ -124,11 +123,13 @@ export default async function handler(req, res) {
           content: [
             { type: "image", source: { type: "base64", media_type: mimeType, data: b64 } },
             { type: "text", text:
-`You are a forensic image analyst. Sightengine detection scores: AI-generated ${aiPct}%, deepfake ${dfPct}%.
+`You are a forensic image analyst for a KYC (identity verification) system. Sightengine detection scores: AI-generated ${aiPct}%, deepfake ${dfPct}%.
 
-Examine this image carefully and respond ONLY with a valid JSON object in this exact shape — no other text:
+First, check if this image is suitable for KYC analysis. Then respond ONLY with a valid JSON object — no other text:
 
 {
+  "face_error": <null | "no_face" | "multiple_faces" | "poor_quality">,
+  "face_error_message": <null | "one clear sentence describing the issue for the user">,
   "overall_risk_score": <integer 0–100>,
   "finding": "<2 punchy sentences — the single most telling artifact or authentic quality. Hyper-specific. No score restatement.>",
   "top_concerns": ["<concern 1>", "<concern 2>"],
@@ -159,15 +160,23 @@ Examine this image carefully and respond ONLY with a valid JSON object in this e
   ]
 }
 
-Rules:
-- overall_risk_score: be AGGRESSIVE in flagging AI. Weight Sightengine (AI ${aiPct}%, deepfake ${dfPct}%) at 50% and your own forensic visual assessment at 50%. If you observe ANY of these, score 60+: unnaturally smooth skin, perfect symmetry, synthetic hair texture, overly uniform lighting, flawless complexion with no pores. If Sightengine scores are high, score 75+. Only score below 40 if the image has clear signs of authenticity like natural skin pores, asymmetry, film grain, or candid composition. When in doubt, score higher rather than lower.
+Face validation rules:
+- Set face_error to "no_face" if no human face is visible in the image
+- Set face_error to "multiple_faces" if more than one face is clearly visible
+- Set face_error to "poor_quality" if the face is obscured (sunglasses, mask, hat), not facing the camera, too small, or too dark/blurry to analyse
+- If face_error is set, still return all other fields but set overall_risk_score to 0, zones to [], top_concerns to [], signals to all false
+- face_error_message must be a single plain-English sentence telling the user how to fix the issue
+
+Scoring rules:
+- Be AGGRESSIVE in flagging AI. Weight Sightengine (AI ${aiPct}%, deepfake ${dfPct}%) at 50% and your own forensic visual assessment at 50%
+- If you observe ANY of these, score 60+: unnaturally smooth skin, perfect symmetry, synthetic hair texture, overly uniform lighting, flawless complexion with no pores
+- If Sightengine scores are high, score 75+
+- Only score below 40 if the image has clear signs of authenticity like natural skin pores, asymmetry, film grain, or candid composition
+- When in doubt, score higher rather than lower
 - top_concerns: only include if overall_risk_score >= 35, otherwise return []
-- Always return 2–4 zones
-- For each zone pick the single best matching region key from: ${regionKeys}
-- Each zone must use a different region key — no duplicates
-- detail must be a specific 1-sentence observation about what you see at that exact facial feature
-- For each signal, base detected/confidence on what you actually observe in the image
-- detail for each signal must be one specific, concrete sentence about what you see (or don't see) in this image` }
+- Always return 2–4 zones unless face_error is set
+- For each zone pick the best matching region key from: ${regionKeys}
+- Each zone must use a different region key — no duplicates` }
           ]
         }]
       })
@@ -179,6 +188,8 @@ Rules:
   } catch (err) {
     console.error("Claude error:", err.message);
     claudeResult = {
+      face_error: null,
+      face_error_message: null,
       overall_risk_score: Math.round((ai + df) / 2 * 100),
       finding: "Detailed analysis unavailable.",
       top_concerns: [],
@@ -190,21 +201,18 @@ Rules:
   // ── 3. Resolve region names → coordinates ────────────────────────────────
   const zones = (claudeResult.zones ?? []).map(z => {
     const coords = REGIONS[z.region] ?? REGIONS["forehead"];
-    return {
-      label:  z.label,
-      detail: z.detail,
-      cx:     coords.cx,
-      cy:     coords.cy,
-    };
+    return { label: z.label, detail: z.detail, cx: coords.cx, cy: coords.cy };
   });
 
   console.log("Final zones:", JSON.stringify(zones));
 
   return res.status(200).json({
+    face_error:         claudeResult.face_error         ?? null,
+    face_error_message: claudeResult.face_error_message ?? null,
     overall_risk_score: claudeResult.overall_risk_score ?? Math.round((ai + df) / 2 * 100),
-    finding:            claudeResult.finding      ?? "Analysis unavailable.",
-    top_concerns:       claudeResult.top_concerns ?? [],
-    signals:            claudeResult.signals       ?? {},
+    finding:            claudeResult.finding             ?? "Analysis unavailable.",
+    top_concerns:       claudeResult.top_concerns        ?? [],
+    signals:            claudeResult.signals              ?? {},
     zones,
     se_ai:  Math.round(ai * 100),
     se_df:  Math.round(df * 100),
