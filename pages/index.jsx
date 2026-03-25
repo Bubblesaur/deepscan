@@ -592,6 +592,15 @@ export default function App() {
 
               {result && !loading && !revealing && (
                 <>
+                  {result.se_ai < 30 && result.se_df < 30 && (result.overall_risk_score ?? 0) >= thresholds.suspicious && (
+                    <div style={{ background: "#FAEEDA", border: "0.5px solid #FAC775", borderRadius: 12, padding: "10px 14px", marginBottom: 10, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <div>
+                        <p style={{ fontSize: 12, fontWeight: 500, color: "#633806", margin: "0 0 2px" }}>Low sensor confidence</p>
+                        <p style={{ fontSize: 11, color: "#854F0B", margin: 0, lineHeight: 1.6 }}>Sightengine returned low scores (AI {result.se_ai}%, deepfake {result.se_df}%). This result is based primarily on Claude's visual analysis, which may be less reliable. Treat with caution.</p>
+                      </div>
+                    </div>
+                  )}
                   <div style={card}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontSize: 13, color: "#5F5E5A" }}>Overall risk score</span>
