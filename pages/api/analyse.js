@@ -160,7 +160,7 @@ Examine this image carefully and respond ONLY with a valid JSON object in this e
 }
 
 Rules:
-- overall_risk_score: use a BALANCED approach — weight Sightengine (AI ${aiPct}%, deepfake ${dfPct}%) at 50% and your own forensic visual assessment at 50%. If Sightengine scores are low but you observe clear AI artifacts, score HIGH. If Sightengine scores are high but the image looks authentic, score MODERATE. Never let Sightengine alone drive the score.
+- overall_risk_score: be AGGRESSIVE in flagging AI. Weight Sightengine (AI ${aiPct}%, deepfake ${dfPct}%) at 50% and your own forensic visual assessment at 50%. If you observe ANY of these, score 60+: unnaturally smooth skin, perfect symmetry, synthetic hair texture, overly uniform lighting, flawless complexion with no pores. If Sightengine scores are high, score 75+. Only score below 40 if the image has clear signs of authenticity like natural skin pores, asymmetry, film grain, or candid composition. When in doubt, score higher rather than lower.
 - top_concerns: only include if overall_risk_score >= 35, otherwise return []
 - Always return 2–4 zones
 - For each zone pick the single best matching region key from: ${regionKeys}
