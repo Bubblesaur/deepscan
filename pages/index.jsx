@@ -1,7 +1,6 @@
 "use client";
 import { useState, useRef, useCallback, useEffect } from "react";
 
-// ── Signal definitions ────────────────────────────────────────────────────────
 const SIGNAL_GROUPS = [
   {
     key: "ai_generation", group: "AI generation",
@@ -53,6 +52,7 @@ const ALL_SIGNALS        = SIGNAL_GROUPS.flatMap(g => g.signals);
 const DEFAULT_WEIGHTS    = { ai_generation: "med", face_manipulation: "high", forensic_cues: "med", metadata: "low" };
 const DEFAULT_BOOSTS     = { face_swap: true, synthetic_texture: true };
 const DEFAULT_THRESHOLDS = { suspicious: 55, high: 70 };
+const MAX_FILE_SIZE      = 10 * 1024 * 1024; // 10MB
 
 const STEPS = [
   { label: "Uploading image",        detail: "Sending your image securely to the analysis server" },
@@ -63,8 +63,6 @@ const STEPS = [
 ];
 
 const toTitleCase = s => s.replace(/\b\w/g, c => c.toUpperCase());
-
-// ── Zone layout ───────────────────────────────────────────────────────────────
 const BOX_W = 185, BOX_H = 94, LINE = 48, V_LEN = 36, H_LEN = 44, ZPAD = 6, DOT_R = 11;
 
 function calcZoneLayout(dot, IW, IH) {
@@ -92,7 +90,6 @@ function calcZoneLayout(dot, IW, IH) {
   return { mode: "perp", dx, dy, vx1, vy1, vx2, vy2, hx1: vx2, hy1: vy2, hx2, hy2: vy2, bx, by };
 }
 
-// ── Small components ──────────────────────────────────────────────────────────
 function AnimatedEllipsis({ label }) {
   const [dots, setDots] = useState("");
   useEffect(() => { const t = setInterval(() => setDots(d => d.length >= 3 ? "" : d + "."), 400); return () => clearInterval(t); }, []);
@@ -114,58 +111,24 @@ function InfoIcon({ text, flipDown }) {
   );
 }
 
-// ── ZoneDot — dot stays pinned at cx/cy, pill flips to avoid edges ────────────
 function ZoneDot({ z, isClean, activeIdx, idx, setActiveIdx }) {
   const isActive = activeIdx === idx, hasActive = activeIdx !== null;
   const dotColor  = isClean ? "#639922" : "#E24B4A";
   const ringColor = isClean ? "rgba(99,153,34,0.35)" : "rgba(226,75,74,0.35)";
   const pillBg    = isClean ? "rgba(234,243,222,0.92)" : "rgba(252,235,235,0.92)";
   const pillBorder= isClean ? "#C0DD97" : "#F09595";
-
-  // Flip pill left when dot is in right 45% to prevent overflow
-  const flipLeft = z.cx > 45;
-  // Drop pill below dot when dot is near the top edge
-  const flipDown = z.cy < 15;
-
+  const flipLeft  = z.cx > 45;
+  const flipDown  = z.cy < 15;
   return (
-    <div
-      onClick={e => { e.stopPropagation(); setActiveIdx(i => i === idx ? null : idx); }}
-      onMouseEnter={() => setActiveIdx(idx)}
-      onMouseLeave={() => setActiveIdx(i => i === idx ? null : i)}
-      style={{
-        position: "absolute",
-        left: `${z.cx}%`,
-        top: `${z.cy}%`,
-        transform: "translate(-50%,-50%)",
-        zIndex: isActive ? 30 : 5,
-        cursor: "pointer",
-        opacity: hasActive && !isActive ? 0.15 : 1,
-        transition: "opacity 0.25s",
-      }}>
-      {/* Dot — always at exactly cx/cy */}
+    <div onClick={e => { e.stopPropagation(); setActiveIdx(i => i === idx ? null : idx); }}
+      onMouseEnter={() => setActiveIdx(idx)} onMouseLeave={() => setActiveIdx(i => i === idx ? null : i)}
+      style={{ position: "absolute", left: `${z.cx}%`, top: `${z.cy}%`, transform: "translate(-50%,-50%)", zIndex: isActive ? 30 : 5, cursor: "pointer", opacity: hasActive && !isActive ? 0.15 : 1, transition: "opacity 0.25s" }}>
       <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isActive ? (isClean ? "rgba(99,153,34,0.2)" : "rgba(226,75,74,0.2)") : "transparent", position: "relative" }}>
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1.5px solid ${ringColor}`, animation: "pulse-dot 1.8s ease-in-out infinite", pointerEvents: "none" }} />
         <div style={{ width: 10, height: 10, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
       </div>
-      {/* Pill label — floats beside/below dot, never overlaps it */}
       {!isActive && (
-        <div style={{
-          position: "absolute",
-          // When near top, drop below; otherwise center vertically beside dot
-          top:       flipDown ? "100%" : "50%",
-          transform: flipDown ? "translateX(-50%)" : "translateY(-50%)",
-          left:      flipDown ? "50%" : (flipLeft ? "auto" : 20),
-          right:     flipDown ? "auto" : (flipLeft ? 20 : "auto"),
-          marginTop: flipDown ? 4 : 0,
-          fontSize: 10, fontWeight: 500,
-          color: isClean ? "#27500A" : "#791F1F",
-          background: pillBg,
-          border: `0.5px solid ${pillBorder}`,
-          borderRadius: 4,
-          padding: "2px 6px",
-          whiteSpace: "nowrap",
-          pointerEvents: "none",
-        }}>
+        <div style={{ position: "absolute", top: flipDown ? "100%" : "50%", transform: flipDown ? "translateX(-50%)" : "translateY(-50%)", left: flipDown ? "50%" : (flipLeft ? "auto" : 20), right: flipDown ? "auto" : (flipLeft ? 20 : "auto"), marginTop: flipDown ? 4 : 0, fontSize: 10, fontWeight: 500, color: isClean ? "#27500A" : "#791F1F", background: pillBg, border: `0.5px solid ${pillBorder}`, borderRadius: 4, padding: "2px 6px", whiteSpace: "nowrap", pointerEvents: "none" }}>
           {toTitleCase(z.label)}
         </div>
       )}
@@ -233,62 +196,114 @@ function GroupCard({ group, color, signals, results }) {
   );
 }
 
+function FaceError({ error, message, onReset }) {
+  const isRed = error === "no_face" || error === "multiple_faces";
+  const bg     = isRed ? "#FCEBEB" : "#FAEEDA";
+  const border = isRed ? "#F09595" : "#FAC775";
+  const text   = isRed ? "#791F1F" : "#633806";
+  const sub    = isRed ? "#A32D2D" : "#854F0B";
+  const titles = { no_face: "No face detected", multiple_faces: "Multiple faces detected", poor_quality: "Face not clearly visible" };
+  const badges = { no_face: "No face found", multiple_faces: "Multiple faces", poor_quality: "Poor quality" };
+  return (
+    <div style={{ background: bg, border: `0.5px solid ${border}`, borderRadius: 12, padding: "16px 14px", marginBottom: 10 }}>
+      <div style={{ display: "inline-block", fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "#fff", border: `0.5px solid ${border}`, color: text, marginBottom: 8 }}>{badges[error]}</div>
+      <div style={{ fontSize: 14, fontWeight: 500, color: text, marginBottom: 4 }}>{titles[error]}</div>
+      <div style={{ fontSize: 12, color: sub, lineHeight: 1.6, marginBottom: 12 }}>{message}</div>
+      <button onClick={onReset} style={{ fontSize: 12, padding: "6px 14px", background: "#2c2c2a", color: "#F1EFE8", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 500 }}>Try another image</button>
+    </div>
+  );
+}
+
 function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThresholds, onClose }) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const OPTS = ["low", "med", "high"];
   const ps = (active, level) => {
     const m = { low: active ? { bg: "#EAF3DE", border: "#C0DD97", text: "#27500A" } : null, med: active ? { bg: "#FAEEDA", border: "#FAC775", text: "#633806" } : null, high: active ? { bg: "#FCEBEB", border: "#F09595", text: "#791F1F" } : null };
     const c = m[level];
     return { padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 500, cursor: "pointer", border: `0.5px solid ${c ? c.border : "#D3D1C7"}`, background: c ? c.bg : "#F1EFE8", color: c ? c.text : "#888780", transition: "all 0.15s" };
   };
-  const row = { display: "flex", alignItems: "center", gap: 8, padding: "9px 0", borderBottom: "0.5px solid #F1EFE8" };
-  const sl = { fontSize: 9, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "#888780", marginBottom: 8 };
+  const Toggle = ({ on, onToggle }) => (
+    <div onClick={onToggle} style={{ width: 36, height: 20, borderRadius: 99, background: on ? "#2c2c2a" : "#D3D1C7", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background 0.2s" }}>
+      <div style={{ width: 16, height: 16, background: "#fff", borderRadius: "50%", position: "absolute", top: 2, left: on ? 18 : 2, transition: "left 0.2s" }} />
+    </div>
+  );
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", background: "rgba(44,44,42,0.4)" }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", maxHeight: "88vh", overflowY: "auto", paddingBottom: 24, maxWidth: 560, width: "100%" }}>
+      <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", maxHeight: "90vh", overflowY: "auto", paddingBottom: 24, maxWidth: 560, width: "100%" }}>
         <div style={{ width: 36, height: 4, background: "#D3D1C7", borderRadius: 99, margin: "10px auto 0" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px 10px", borderBottom: "0.5px solid #F1EFE8" }}>
-          <div><p style={{ fontSize: 15, fontWeight: 500, color: "#2c2c2a", margin: 0 }}>Scan settings</p><p style={{ fontSize: 11, color: "#888780", margin: 0 }}>Adjust signal weights and thresholds</p></div>
+          <div><p style={{ fontSize: 15, fontWeight: 500, color: "#2c2c2a", margin: 0 }}>Scan settings</p><p style={{ fontSize: 11, color: "#888780", margin: 0 }}>Adjust sensitivity and detection focus</p></div>
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: "50%", background: "#F1EFE8", border: "0.5px solid #D3D1C7", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5F5E5A" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <div style={{ padding: "14px 20px 0" }}>
-          <p style={sl}>Signal group weights</p>
-          {SIGNAL_GROUPS.map(g => (
-            <div key={g.key} style={{ ...row, ...(g.key === "metadata" ? { borderBottom: "none" } : {}) }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: g.dot, flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#2c2c2a" }}>{g.group}</span>
-              <InfoIcon text={g.info} />
-              <div style={{ display: "flex", gap: 4 }}>{OPTS.map(opt => <div key={opt} style={ps(weights[g.key] === opt, opt)} onClick={() => onWeights({ ...weights, [g.key]: opt })}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</div>)}</div>
+        <div style={{ padding: "18px 20px 0" }}>
+
+          {/* Sensitivity */}
+          <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "#888780", marginBottom: 12 }}>Detection sensitivity</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 500, color: "#2c2c2a", margin: "0 0 2px" }}>Flag as suspicious</p>
+              <p style={{ fontSize: 11, color: "#888780", margin: 0 }}>Lower = more flags, higher = fewer flags</p>
             </div>
-          ))}
-        </div>
-        <div style={{ padding: "14px 20px 0", borderTop: "0.5px solid #F1EFE8", marginTop: 10 }}>
-          <p style={sl}>Boost individual signals</p>
-          {ALL_SIGNALS.map((s, i) => (
-            <div key={s.key} style={{ ...row, ...(i === ALL_SIGNALS.length - 1 ? { borderBottom: "none" } : {}) }}>
-              <span style={{ flex: 1, fontSize: 12, color: "#5F5E5A" }}>{s.label}</span>
-              {boosts[s.key] && <span style={{ fontSize: 9, background: "#FAEEDA", color: "#854F0B", border: "0.5px solid #FAC775", borderRadius: 4, padding: "1px 5px" }}>Boosted</span>}
-              <InfoIcon text={s.info} flipDown={i > ALL_SIGNALS.length - 5} />
-              <div onClick={() => onBoosts({ ...boosts, [s.key]: !boosts[s.key] })} style={{ width: 32, height: 18, borderRadius: 99, background: boosts[s.key] ? "#2c2c2a" : "#D3D1C7", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background 0.2s" }}>
-                <div style={{ width: 14, height: 14, background: "#fff", borderRadius: "50%", position: "absolute", top: 2, left: boosts[s.key] ? 16 : 2, transition: "left 0.2s" }} />
-              </div>
+            <span style={{ fontSize: 14, fontWeight: 500, color: "#2c2c2a" }}>{thresholds.suspicious}</span>
+          </div>
+          <input type="range" min="1" max="99" step="1" value={thresholds.suspicious} onChange={e => onThresholds({ ...thresholds, suspicious: Number(e.target.value) })} style={{ width: "100%", marginBottom: 4 }} />
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
+            <span style={{ fontSize: 10, color: "#B4B2A9" }}>More sensitive</span>
+            <span style={{ fontSize: 10, color: "#B4B2A9" }}>Less sensitive</span>
+          </div>
+
+          <div style={{ borderTop: "0.5px solid #F1EFE8", marginBottom: 18 }} />
+
+          {/* Detection focus */}
+          <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "#888780", marginBottom: 12 }}>Detection focus</p>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: "#2c2c2a", margin: "0 0 3px" }}>Prioritise AI generation</p>
+              <p style={{ fontSize: 11, color: "#888780", margin: 0, lineHeight: 1.5 }}>Flag synthetic faces from Midjourney, DALL-E etc.</p>
             </div>
-          ))}
-        </div>
-        <div style={{ padding: "14px 20px 0", borderTop: "0.5px solid #F1EFE8", marginTop: 10 }}>
-          <p style={sl}>Risk thresholds</p>
-          {[{ key: "suspicious", label: "Flag as suspicious" }, { key: "high", label: "Flag as high risk" }].map(t => (
-            <div key={t.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: t.key === "suspicious" ? "0.5px solid #F1EFE8" : "none" }}>
-              <span style={{ fontSize: 12, color: "#5F5E5A", width: 130, flexShrink: 0 }}>{t.label}</span>
-              <input type="range" min="1" max="99" step="1" value={thresholds[t.key]} onChange={e => onThresholds({ ...thresholds, [t.key]: Number(e.target.value) })} style={{ flex: 1 }} />
-              <span style={{ fontSize: 12, fontWeight: 500, color: "#2c2c2a", minWidth: 28, textAlign: "right" }}>{thresholds[t.key]}</span>
+            <Toggle on={boosts["ai_generated"]} onToggle={() => onBoosts({ ...boosts, ai_generated: !boosts["ai_generated"], diffusion_model: !boosts["ai_generated"] })} />
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 18 }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: "#2c2c2a", margin: "0 0 3px" }}>Prioritise deepfake detection</p>
+              <p style={{ fontSize: 11, color: "#888780", margin: 0, lineHeight: 1.5 }}>Flag face swaps and reenactments on real identities.</p>
             </div>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 8, padding: "16px 20px 0" }}>
-          <button onClick={() => { onWeights({ ...DEFAULT_WEIGHTS }); onBoosts({ ...DEFAULT_BOOSTS }); onThresholds({ ...DEFAULT_THRESHOLDS }); }} style={{ flex: 1, padding: "10px", background: "#F1EFE8", border: "0.5px solid #D3D1C7", borderRadius: 10, fontSize: 13, color: "#5F5E5A", cursor: "pointer" }}>Reset defaults</button>
-          <button onClick={onClose} style={{ flex: 2, padding: "10px", background: "#2c2c2a", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 500, color: "#F1EFE8", cursor: "pointer" }}>Apply settings</button>
+            <Toggle on={boosts["face_swap"]} onToggle={() => onBoosts({ ...boosts, face_swap: !boosts["face_swap"], face_reenactment: !boosts["face_swap"] })} />
+          </div>
+
+          <div style={{ borderTop: "0.5px solid #F1EFE8", marginBottom: 14 }} />
+
+          {/* Advanced toggle row */}
+          <div onClick={() => setShowAdvanced(a => !a)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#F1EFE8", borderRadius: 8, marginBottom: showAdvanced ? 14 : 18, cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888780" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+              <span style={{ fontSize: 12, color: "#5F5E5A" }}>Advanced settings</span>
+            </div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888780" strokeWidth="2" strokeLinecap="round" style={{ transform: showAdvanced ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+
+          {/* Advanced content */}
+          {showAdvanced && (
+            <div style={{ background: "#F1EFE8", borderRadius: 8, padding: 14, marginBottom: 18 }}>
+              <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "#888780", marginBottom: 10 }}>Signal group weights</p>
+              {SIGNAL_GROUPS.map((g, i) => (
+                <div key={g.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: i === SIGNAL_GROUPS.length - 1 ? "none" : "0.5px solid #D3D1C7" }}>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: g.dot, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 12, color: "#5F5E5A" }}>{g.group}</span>
+                  <InfoIcon text={g.info} />
+                  <div style={{ display: "flex", gap: 4 }}>{OPTS.map(opt => <div key={opt} style={ps(weights[g.key] === opt, opt)} onClick={() => onWeights({ ...weights, [g.key]: opt })}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</div>)}</div>
+                </div>
+              ))}
+              <p style={{ fontSize: 10, color: "#B4B2A9", margin: "10px 0 0", lineHeight: 1.5 }}>These settings affect how signal groups contribute to the final score.</p>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, paddingBottom: 8 }}>
+            <button onClick={() => { onWeights({ ...DEFAULT_WEIGHTS }); onBoosts({ ...DEFAULT_BOOSTS }); onThresholds({ ...DEFAULT_THRESHOLDS }); }} style={{ flex: 1, padding: "10px", background: "#F1EFE8", border: "0.5px solid #D3D1C7", borderRadius: 10, fontSize: 13, color: "#5F5E5A", cursor: "pointer" }}>Reset defaults</button>
+            <button onClick={onClose} style={{ flex: 2, padding: "10px", background: "#2c2c2a", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 500, color: "#F1EFE8", cursor: "pointer" }}>Apply settings</button>
+          </div>
         </div>
       </div>
     </div>
@@ -304,7 +319,6 @@ function IconSettings() { return <svg width="16" height="16" viewBox="0 0 24 24"
 const cardLabel = { fontSize: 10, letterSpacing: "0.07em", textTransform: "uppercase", color: "#888780", marginBottom: 8, fontWeight: 500 };
 const card = { background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 12, padding: "12px 14px", marginBottom: 10 };
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [imgUrl,       setImgUrl]       = useState(null);
   const [imgB64,       setImgB64]       = useState(null);
@@ -324,8 +338,8 @@ export default function App() {
   const [weights,      setWeights]      = useState({ ...DEFAULT_WEIGHTS });
   const [boosts,       setBoosts]       = useState({ ...DEFAULT_BOOSTS });
   const [thresholds,   setThresholds]   = useState({ ...DEFAULT_THRESHOLDS });
-
-  const [health, setHealth] = useState(null); // null=checking, {status,se,claude}=done
+  const [fileError,    setFileError]    = useState(null);
+  const [health,       setHealth]       = useState(null);
 
   const fileRef         = useRef();
   const replaceRef      = useRef();
@@ -356,7 +370,16 @@ export default function App() {
   }, []);
 
   const processFile = (file) => {
-    if (!file || !file.type.startsWith("image/")) return;
+    setFileError(null);
+    if (!file) return;
+    if (!file.type.startsWith("image/") || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setFileError({ type: "format", message: "Please upload a JPEG, PNG or WebP image." });
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError({ type: "size", message: `Maximum file size is 10MB. Your file is ${(file.size / (1024 * 1024)).toFixed(1)}MB.` });
+      return;
+    }
     setImgMime(file.type || "image/jpeg");
     const r = new FileReader();
     r.onload = (e) => { setImgUrl(e.target.result); setImgB64(e.target.result.split(",")[1]); setResult(null); setShowHeat(false); setActiveZone(null); };
@@ -394,43 +417,42 @@ export default function App() {
       setTimeout(() => {
         setRevealing(false); setLoading(false);
         setResult(pendingRef.current);
-        setShowHeat((pendingRef.current.zones?.length ?? 0) > 0);
+        setShowHeat(!pendingRef.current.face_error && (pendingRef.current.zones?.length ?? 0) > 0);
       }, 1800);
     } catch (err) {
       clearInterval(tickerRef.current); clearInterval(timerRef.current);
       setLoading(false);
-      setResult({ overall_risk_score: 0, top_concerns: [], signals: {}, zones: [], finding: "Analysis failed: " + err.message });
+      setResult({ face_error: null, overall_risk_score: 0, top_concerns: [], signals: {}, zones: [], finding: "Analysis failed: " + err.message });
     }
   };
 
-  const reset = () => { setImgUrl(null); setImgB64(null); setResult(null); setShowHeat(false); setActiveZone(null); setLoading(false); setRevealing(false); setStep(0); clearInterval(tickerRef.current); clearInterval(timerRef.current); };
+  const reset = () => { setImgUrl(null); setImgB64(null); setResult(null); setShowHeat(false); setActiveZone(null); setLoading(false); setRevealing(false); setStep(0); setFileError(null); clearInterval(tickerRef.current); clearInterval(timerRef.current); };
 
-  const remaining = Math.max(0, estimate - elapsed);
-  const pct       = Math.min((elapsed / estimate) * 100, 100);
-  const revScore  = pendingRef.current ? (pendingRef.current.overall_risk_score ?? 0) : 0;
+  const remaining  = Math.max(0, estimate - elapsed);
+  const pct        = Math.min((elapsed / estimate) * 100, 100);
+  const revScore   = pendingRef.current ? (pendingRef.current.overall_risk_score ?? 0) : 0;
   const revealMeta = revScore >= thresholds.high
     ? { bg: "#FCEBEB", color: "#A32D2D", border: "#F09595", icon: "⚠", text: "High risk detected" }
     : revScore >= thresholds.suspicious
     ? { bg: "#FAEEDA", color: "#854F0B", border: "#FAC775", icon: "!", text: "Suspicious signals found" }
     : { bg: "#EAF3DE", color: "#3B6D11", border: "#C0DD97", icon: "✓", text: "Looks mostly clean" };
 
-  const totalFlagged = result ? ALL_SIGNALS.filter(s => result.signals?.[s.key]?.detected).length : 0;
-  const isClean      = result ? (result.overall_risk_score ?? 0) < thresholds.suspicious : true;
-
+  const totalFlagged   = result ? ALL_SIGNALS.filter(s => result.signals?.[s.key]?.detected).length : 0;
+  const isClean        = result ? (result.overall_risk_score ?? 0) < thresholds.suspicious : true;
   const activeZoneData = result?.zones?.[activeZone] ?? null;
-  const zoneLayout = activeZoneData && imgSize.w > 0 ? calcZoneLayout(activeZoneData, imgSize.w, imgSize.h) : null;
-  const lineColor = isClean ? "#3B6D11" : "#666";
-  const calloutBorder = isClean ? "#C0DD97" : "#F09595";
-  const calloutTitleColor = isClean ? "#27500A" : "#A32D2D";
-  const calloutHeaderBg = isClean ? "#EAF3DE" : "#FCEBEB";
+  const zoneLayout     = activeZoneData && imgSize.w > 0 ? calcZoneLayout(activeZoneData, imgSize.w, imgSize.h) : null;
+  const lineColor      = isClean ? "#3B6D11" : "#666";
+  const calloutBorder      = isClean ? "#C0DD97" : "#F09595";
+  const calloutTitleColor  = isClean ? "#27500A" : "#A32D2D";
+  const calloutHeaderBg    = isClean ? "#EAF3DE" : "#FCEBEB";
 
   return (
     <div style={{ background: "#F1EFE8", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <style>{`
-        @keyframes scanline   { 0%{top:-2px} 100%{top:100%} }
-        @keyframes pulsebox   { 0%,100%{opacity:0.15} 50%{opacity:0.72} }
-        @keyframes pulse-dot  { 0%,100%{transform:scale(1);opacity:0.45} 50%{transform:scale(1.7);opacity:0.15} }
-        @keyframes fade-callout { from{opacity:0} to{opacity:1} }
+        @keyframes scanline    { 0%{top:-2px} 100%{top:100%} }
+        @keyframes pulsebox    { 0%,100%{opacity:0.15} 50%{opacity:0.72} }
+        @keyframes pulse-dot   { 0%,100%{transform:scale(1);opacity:0.45} 50%{transform:scale(1.7);opacity:0.15} }
+        @keyframes fade-callout{ from{opacity:0} to{opacity:1} }
         @keyframes draw-s { from{stroke-dashoffset:${LINE}} to{stroke-dashoffset:0} }
         @keyframes draw-v { from{stroke-dashoffset:${V_LEN}} to{stroke-dashoffset:0} }
         @keyframes draw-h { from{stroke-dashoffset:${H_LEN}} to{stroke-dashoffset:0} }
@@ -459,84 +481,97 @@ export default function App() {
         </div>
       </div>
 
-      {/* Body */}
       <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", width: "100%" }}>
-        {/* Health check banner */}
+
+        {/* Upload state */}
         {!imgUrl && (
-          <div style={{ padding: "16px 24px 0" }}>
-            {health === null && (
-              <div style={{ background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#D3D1C7", flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: "#888780" }}>Checking detection services…</span>
-              </div>
-            )}
-            {health?.status === "ok" && (
-              <div style={{ background: "#EAF3DE", border: "0.5px solid #C0DD97", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#639922", flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: "#27500A" }}>All systems operational</div>
-                  <div style={{ fontSize: 11, color: "#3B6D11" }}>Sightengine + Claude ready</div>
+          <>
+            {/* Health check banner */}
+            <div style={{ padding: "16px 24px 0" }}>
+              {health === null && (
+                <div style={{ background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#D3D1C7", flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: "#888780" }}>Checking detection services…</span>
                 </div>
-              </div>
-            )}
-            {health?.status === "degraded" && (
-              <div style={{ background: "#FAEEDA", border: "0.5px solid #FAC775", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF9F27", flexShrink: 0 }} />
+              )}
+              {health?.status === "ok" && (
+                <div style={{ background: "#EAF3DE", border: "0.5px solid #C0DD97", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#639922", flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: "#633806" }}>Degraded — Sightengine unavailable</div>
-                    <div style={{ fontSize: 11, color: "#854F0B" }}>Scans will rely on Claude visual analysis only</div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "#27500A" }}>All systems operational</div>
+                    <div style={{ fontSize: 11, color: "#3B6D11" }}>Sightengine + Claude ready</div>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <div style={{ flex: 1, background: "#fff", border: `0.5px solid ${health.se ? "#C0DD97" : "#FAC775"}`, borderRadius: 6, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: health.se ? "#639922" : "#EF9F27", flexShrink: 0 }} />
-                    <span style={{ fontSize: 11, color: health.se ? "#27500A" : "#633806" }}>Sightengine</span>
-                    <span style={{ fontSize: 10, color: health.se ? "#3B6D11" : "#854F0B", marginLeft: "auto" }}>{health.se ? "online" : "offline"}</span>
-                  </div>
-                  <div style={{ flex: 1, background: "#fff", border: `0.5px solid ${health.claude ? "#C0DD97" : "#FAC775"}`, borderRadius: 6, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: health.claude ? "#639922" : "#EF9F27", flexShrink: 0 }} />
-                    <span style={{ fontSize: 11, color: health.claude ? "#27500A" : "#633806" }}>Claude</span>
-                    <span style={{ fontSize: 10, color: health.claude ? "#3B6D11" : "#854F0B", marginLeft: "auto" }}>{health.claude ? "online" : "offline"}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            {health?.status === "down" && (
-              <div style={{ background: "#FCEBEB", border: "0.5px solid #F09595", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#E24B4A", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: "#791F1F" }}>Service unavailable</div>
-                    <div style={{ fontSize: 11, color: "#A32D2D" }}>Scans are paused until services recover</div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[{ label: "Sightengine", ok: health.se }, { label: "Claude", ok: health.claude }].map(s => (
-                    <div key={s.label} style={{ flex: 1, background: "#fff", border: `0.5px solid ${s.ok ? "#C0DD97" : "#F09595"}`, borderRadius: 6, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.ok ? "#639922" : "#E24B4A", flexShrink: 0 }} />
-                      <span style={{ fontSize: 11, color: s.ok ? "#27500A" : "#791F1F" }}>{s.label}</span>
-                      <span style={{ fontSize: 10, color: s.ok ? "#3B6D11" : "#A32D2D", marginLeft: "auto" }}>{s.ok ? "online" : "offline"}</span>
+              )}
+              {health?.status === "degraded" && (
+                <div style={{ background: "#FAEEDA", border: "0.5px solid #FAC775", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF9F27", flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: "#633806" }}>Degraded — Sightengine unavailable</div>
+                      <div style={{ fontSize: 11, color: "#854F0B" }}>Scans will rely on Claude visual analysis only</div>
                     </div>
-                  ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {[{ label: "Sightengine", ok: health.se }, { label: "Claude", ok: health.claude }].map(s => (
+                      <div key={s.label} style={{ flex: 1, background: "#fff", border: `0.5px solid ${s.ok ? "#C0DD97" : "#FAC775"}`, borderRadius: 6, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.ok ? "#639922" : "#EF9F27", flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, color: s.ok ? "#27500A" : "#633806" }}>{s.label}</span>
+                        <span style={{ fontSize: 10, color: s.ok ? "#3B6D11" : "#854F0B", marginLeft: "auto" }}>{s.ok ? "online" : "offline"}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {!imgUrl && (
-          <div style={{ padding: "0 24px 40px" }}>
-            <div onClick={() => fileRef.current.click()} onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={onDrop}
-              style={{ border: `1.5px dashed ${drag ? "#378ADD" : "#B4B2A9"}`, borderRadius: 16, padding: "64px 40px", textAlign: "center", cursor: "pointer", background: drag ? "#E6F1FB" : "#e8e7e2", transition: "background 0.15s, border-color 0.15s", maxWidth: 560, margin: "0 auto" }}>
-              <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><IconUpload /></div>
-              <p style={{ fontSize: 16, fontWeight: 500, color: "#444441", margin: "0 0 4px" }}>Drop an image here</p>
-              <p style={{ fontSize: 13, color: "#888780", margin: 0 }}>or click to browse — JPEG, PNG, WebP</p>
-              <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => processFile(e.target.files[0])} />
+              )}
+              {health?.status === "down" && (
+                <div style={{ background: "#FCEBEB", border: "0.5px solid #F09595", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#E24B4A", flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: "#791F1F" }}>Service unavailable</div>
+                      <div style={{ fontSize: 11, color: "#A32D2D" }}>Scans are paused until services recover</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {[{ label: "Sightengine", ok: health.se }, { label: "Claude", ok: health.claude }].map(s => (
+                      <div key={s.label} style={{ flex: 1, background: "#fff", border: `0.5px solid ${s.ok ? "#C0DD97" : "#F09595"}`, borderRadius: 6, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.ok ? "#639922" : "#E24B4A", flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, color: s.ok ? "#27500A" : "#791F1F" }}>{s.label}</span>
+                        <span style={{ fontSize: 10, color: s.ok ? "#3B6D11" : "#A32D2D", marginLeft: "auto" }}>{s.ok ? "online" : "offline"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+
+            <div style={{ padding: "8px 24px 40px" }}>
+              {/* File error */}
+              {fileError && (
+                <div style={{ background: "#FCEBEB", border: "0.5px solid #F09595", borderRadius: 10, padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A32D2D" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <div>
+                    <p style={{ fontSize: 12, fontWeight: 500, color: "#791F1F", margin: "0 0 2px" }}>{fileError.type === "format" ? "Unsupported file type" : "File too large"}</p>
+                    <p style={{ fontSize: 11, color: "#A32D2D", margin: 0 }}>{fileError.message}</p>
+                  </div>
+                </div>
+              )}
+              <div
+                onClick={() => fileRef.current.click()}
+                onDragOver={e => { e.preventDefault(); setDrag(true); }}
+                onDragLeave={() => setDrag(false)}
+                onDrop={onDrop}
+                style={{ border: `1.5px dashed ${drag ? "#378ADD" : fileError ? "#F09595" : "#B4B2A9"}`, borderRadius: 16, padding: "64px 40px", textAlign: "center", cursor: "pointer", background: drag ? "#E6F1FB" : fileError ? "#FCEBEB" : "#e8e7e2", transition: "background 0.15s, border-color 0.15s", maxWidth: 560, margin: "0 auto" }}>
+                <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><IconUpload /></div>
+                <p style={{ fontSize: 16, fontWeight: 500, color: "#444441", margin: "0 0 4px" }}>Drop an image here</p>
+                <p style={{ fontSize: 13, color: "#888780", margin: 0 }}>or click to browse — JPEG, PNG, WebP · max 10MB</p>
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={e => processFile(e.target.files[0])} />
+              </div>
+            </div>
+          </>
         )}
 
+        {/* Two-column layout */}
         {imgUrl && (
           <div className="two-col" style={{ display: "flex", height: "calc(100vh - 73px)", overflow: "hidden" }}>
 
@@ -546,7 +581,6 @@ export default function App() {
                 <div ref={imgContainerRef} style={{ position: "relative", borderRadius: 8, marginBottom: 8 }}>
                   <img src={imgUrl} alt="Uploaded" style={{ width: "100%", display: "block", borderRadius: 8 }} />
 
-                  {/* Scan overlay */}
                   {loading && !revealing && (
                     <div style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "hidden" }}>
                       <div style={{ position: "absolute", inset: 0, background: "rgba(44,44,42,0.32)" }} />
@@ -563,7 +597,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Zone dots — overflow visible so pills never get clipped */}
                   {!loading && !revealing && showHeat && result?.zones?.length > 0 && (() => {
                     const L = zoneLayout;
                     return (
@@ -599,14 +632,14 @@ export default function App() {
                 </div>
 
                 <div style={{ display: "flex", gap: 8 }}>
-                  {result && !loading && (
+                  {result && !loading && !result.face_error && (
                     <button onClick={() => { setShowHeat(h => !h); setActiveZone(null); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, padding: "6px 0", cursor: "pointer" }}>
                       <IconScan />{showHeat ? "Hide heatmap" : "Show heatmap"}
                     </button>
                   )}
                   <button onClick={() => replaceRef.current.click()} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, padding: "6px 0", cursor: "pointer" }}><IconSwap />Replace</button>
                   <button onClick={reset} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, padding: "6px 0", color: "#A32D2D", cursor: "pointer" }}><IconTrash />Remove</button>
-                  <input ref={replaceRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => processFile(e.target.files[0])} />
+                  <input ref={replaceRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={e => processFile(e.target.files[0])} />
                 </div>
               </div>
 
@@ -615,18 +648,17 @@ export default function App() {
                   Analyse image
                 </button>
               )}
-              {result && !loading && !revealing && (
+              {result && !loading && !revealing && !result.face_error && (
                 <button onClick={analyse} style={{ width: "100%", padding: "10px", background: "#fff", color: "#2c2c2a", border: "0.5px solid #D3D1C7", borderRadius: 10, fontSize: 13, cursor: "pointer" }}>
                   Re-analyse
                 </button>
               )}
-              <p style={{ fontSize: 11, color: "#B4B2A9", textAlign: "center", lineHeight: 1.6 }}>
-                Results are probabilistic and should not be used as sole evidence of authenticity.
-              </p>
+              <p style={{ fontSize: 11, color: "#B4B2A9", textAlign: "center", lineHeight: 1.6 }}>Results are probabilistic and should not be used as sole evidence of authenticity.</p>
             </div>
 
             {/* Right column */}
             <div className="right-col" style={{ flex: 1, overflowY: "auto", padding: "20px 24px 40px 16px" }}>
+
               {loading && !revealing && (
                 <div style={{ background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 12, padding: "16px 16px 10px", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -665,54 +697,65 @@ export default function App() {
 
               {result && !loading && !revealing && (
                 <>
-                  {result.se_ai < 30 && result.se_df < 30 && (result.overall_risk_score ?? 0) >= thresholds.suspicious && (
-                    <div style={{ background: "#FAEEDA", border: "0.5px solid #FAC775", borderRadius: 12, padding: "10px 14px", marginBottom: 10, display: "flex", gap: 10, alignItems: "flex-start" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                      <div>
-                        <p style={{ fontSize: 12, fontWeight: 500, color: "#633806", margin: "0 0 2px" }}>Low sensor confidence</p>
-                        <p style={{ fontSize: 11, color: "#854F0B", margin: 0, lineHeight: 1.6 }}>Sightengine returned low scores (AI {result.se_ai}%, deepfake {result.se_df}%). This result is based primarily on Claude's visual analysis, which may be less reliable. Treat with caution.</p>
-                      </div>
-                    </div>
+                  {/* Face error state */}
+                  {result.face_error && (
+                    <FaceError error={result.face_error} message={result.face_error_message} onReset={reset} />
                   )}
-                  <div style={card}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 13, color: "#5F5E5A" }}>Overall risk score</span>
-                      <RiskBadge score={result.overall_risk_score ?? 0} thresholds={thresholds} />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 6 }}>
-                      <span style={{ fontSize: 40, fontWeight: 500, color: "#2c2c2a" }}>{result.overall_risk_score ?? 0}</span>
-                      <span style={{ fontSize: 13, color: "#888780" }}>/ 100</span>
-                      <span style={{ fontSize: 12, color: "#888780", marginLeft: "auto" }}>{totalFlagged} / {ALL_SIGNALS.length} signals flagged</span>
-                    </div>
-                    <ScoreBar score={result.overall_risk_score ?? 0} />
-                  </div>
 
-                  {result.top_concerns?.length > 0 && (
-                    <div style={{ background: "#FCEBEB", border: "0.5px solid #E24B4A", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: "#A32D2D", marginBottom: 8 }}>Top concerns</div>
-                      {result.top_concerns.map((c, i) => (
-                        <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "flex-start" }}>
-                          <span style={{ color: "#E24B4A", fontWeight: 700, fontSize: 12, marginTop: 2 }}>!</span>
-                          <span style={{ fontSize: 13, color: "#791F1F", lineHeight: 1.5 }}>{c}</span>
+                  {/* Normal results */}
+                  {!result.face_error && (
+                    <>
+                      {result.se_ai < 30 && result.se_df < 30 && (result.overall_risk_score ?? 0) >= thresholds.suspicious && (
+                        <div style={{ background: "#FAEEDA", border: "0.5px solid #FAC775", borderRadius: 12, padding: "10px 14px", marginBottom: 10, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          <div>
+                            <p style={{ fontSize: 12, fontWeight: 500, color: "#633806", margin: "0 0 2px" }}>Low sensor confidence</p>
+                            <p style={{ fontSize: 11, color: "#854F0B", margin: 0, lineHeight: 1.6 }}>Sightengine returned low scores (AI {result.se_ai}%, deepfake {result.se_df}%). This result is based primarily on Claude's visual analysis, which may be less reliable. Treat with caution.</p>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      )}
 
-                  {result.finding && (
-                    <div style={card}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <p style={{ ...cardLabel, margin: 0 }}>Forensic finding</p>
-                        <button onClick={() => { if (result?.finding) navigator.clipboard.writeText(result.finding).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); }}
-                          style={{ fontSize: 11, padding: "3px 10px", cursor: "pointer", color: copied ? "#27500A" : "#5F5E5A", borderColor: copied ? "#C0DD97" : undefined, background: copied ? "#EAF3DE" : undefined }}>
-                          {copied ? "Copied" : "Copy"}
-                        </button>
+                      <div style={card}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 13, color: "#5F5E5A" }}>Overall risk score</span>
+                          <RiskBadge score={result.overall_risk_score ?? 0} thresholds={thresholds} />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 6 }}>
+                          <span style={{ fontSize: 40, fontWeight: 500, color: "#2c2c2a" }}>{result.overall_risk_score ?? 0}</span>
+                          <span style={{ fontSize: 13, color: "#888780" }}>/ 100</span>
+                          <span style={{ fontSize: 12, color: "#888780", marginLeft: "auto" }}>{totalFlagged} / {ALL_SIGNALS.length} signals flagged</span>
+                        </div>
+                        <ScoreBar score={result.overall_risk_score ?? 0} />
                       </div>
-                      <p style={{ fontSize: 13, lineHeight: 1.75, color: "#2c2c2a", margin: 0 }}>{result.finding}</p>
-                    </div>
-                  )}
 
-                  {SIGNAL_GROUPS.map(g => <GroupCard key={g.key} group={g.group} color={g.color} signals={g.signals} results={result.signals} />)}
+                      {result.top_concerns?.length > 0 && (
+                        <div style={{ background: "#FCEBEB", border: "0.5px solid #E24B4A", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: "#A32D2D", marginBottom: 8 }}>Top concerns</div>
+                          {result.top_concerns.map((c, i) => (
+                            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "flex-start" }}>
+                              <span style={{ color: "#E24B4A", fontWeight: 700, fontSize: 12, marginTop: 2 }}>!</span>
+                              <span style={{ fontSize: 13, color: "#791F1F", lineHeight: 1.5 }}>{c}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {result.finding && (
+                        <div style={card}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                            <p style={{ ...cardLabel, margin: 0 }}>Forensic finding</p>
+                            <button onClick={() => { if (result?.finding) navigator.clipboard.writeText(result.finding).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); }}
+                              style={{ fontSize: 11, padding: "3px 10px", cursor: "pointer", color: copied ? "#27500A" : "#5F5E5A", borderColor: copied ? "#C0DD97" : undefined, background: copied ? "#EAF3DE" : undefined }}>
+                              {copied ? "Copied" : "Copy"}
+                            </button>
+                          </div>
+                          <p style={{ fontSize: 13, lineHeight: 1.75, color: "#2c2c2a", margin: 0 }}>{result.finding}</p>
+                        </div>
+                      )}
+
+                      {SIGNAL_GROUPS.map(g => <GroupCard key={g.key} group={g.group} color={g.color} signals={g.signals} results={result.signals} />)}
+                    </>
+                  )}
                 </>
               )}
 
