@@ -1,42 +1,4 @@
-function ZoneDot({ z, isClean, activeIdx, idx, setActiveIdx }) {
-  const isActive  = activeIdx === idx;
-  const hasActive = activeIdx !== null;
-  const dotColor  = isClean ? "#639922"              : "#E24B4A";
-  const ringColor = isClean ? "rgba(99,153,34,0.35)" : "rgba(226,75,74,0.35)";
-  const calloutBg     = "#fff";
-  const calloutBorder = isClean ? "#C0DD97" : "#F09595";
-  const titleColor    = isClean ? "#27500A" : "#A32D2D";
-  const flipLeft = z.cx > 55;
-  const flipUp   = z.cy > 55;
-
-  const toTitleCase = s => s.replace(/\b\w/g, c => c.toUpperCase());
-
-  return (
-    <div
-      onMouseEnter={() => setActiveIdx(idx)}
-      onMouseLeave={() => { if (!isActive) return; }}
-      onClick={e => { e.stopPropagation(); setActiveIdx(i => i === idx ? null : idx); }}
-      style={{
-        position: "absolute", left: `${z.cx}%`, top: `${z.cy}%`,
-        transform: "translate(-50%, -50%)",
-        zIndex: isActive ? 20 : 5,
-        cursor: "pointer",
-        opacity: hasActive && !isActive ? 0.15 : 1,
-        transition: "opacity 0.25s",
-      }}>
-
-      <style>{`@keyframes pulse-dot{0%,100%{transform:scale(1);opacity:0.45}50%{transform:scale(1.7);opacity:0.15}}`}</style>
-
-      {/* Dot + ring */}
-      <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isActive ? (isClean ? "rgba(99,153,34,0.2)" : "rgba(226,75,74,0.2)") : "transparent", position: "relative" }}>
-        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1.5px solid ${ringColor}`, animation: "pulse-dot 1.8s ease-in-out infinite", pointerEvents: "none" }} />
-        <div style={{ width: 10, height: 10, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
-      </div>
-
-      {/* Pill label — hidden when active */}
-      <div style={{
-        position: "absolute", top: "50%", transform: "translateY(-50%)",
-        [flipLeft ? "right"use client";
+"use client";
 import { useState, useRef, useCallback, useEffect } from "react";
 
 // ── Signal definitions ────────────────────────────────────────────────────────
@@ -61,9 +23,9 @@ const SIGNAL_GROUPS = [
     dot: "#D85A30",
     info: "Increases the weight of face swap, reenactment and blending signals. Set to High if deepfakes are your primary concern.",
     signals: [
-      { key: "face_swap",        label: "Face swap detected",     info: "Detects whether a face in the image has been replaced with another person's likeness using AI face-swapping techniques." },
-      { key: "face_reenactment", label: "Face reenactment",       info: "Identifies manipulation of facial expressions or mouth regions, commonly used to alter the appearance of speech in AI-generated portraits." },
-      { key: "edge_blending",    label: "Unnatural edge blending",info: "Looks for soft or inconsistent boundaries around the face where a swap or composite has been blended into the background." },
+      { key: "face_swap",        label: "Face swap detected",      info: "Detects whether a face in the image has been replaced with another person's likeness using AI face-swapping techniques." },
+      { key: "face_reenactment", label: "Face reenactment",        info: "Identifies manipulation of facial expressions or mouth regions, commonly used to alter the appearance of speech in AI-generated portraits." },
+      { key: "edge_blending",    label: "Unnatural edge blending", info: "Looks for soft or inconsistent boundaries around the face where a swap or composite has been blended into the background." },
       { key: "skin_smoothing",   label: "Excessive skin smoothing",info: "Flags skin that is unnaturally uniform or poreless — a side effect of AI face generators and heavy deepfake post-processing." },
     ],
   },
@@ -74,10 +36,10 @@ const SIGNAL_GROUPS = [
     dot: "#1D9E75",
     info: "Weights forensic visual cues like lighting, catch-lights, hair edges and background seams. Useful for catching subtle AI portraits that pass basic checks.",
     signals: [
-      { key: "lighting_mismatch", label: "Lighting inconsistency",       info: "Checks whether the direction, colour temperature and shadow pattern of the lighting is consistent across the face and background." },
-      { key: "catch_light",       label: "Missing / cloned catch-lights", info: "Real eyes reflect light sources as unique catch-lights. AI images often clone identical reflections in both eyes or omit them entirely." },
-      { key: "hair_detail",       label: "Hair edge anomaly",             info: "Examines hair boundaries for the characteristic blur or dissolve that occurs when AI models struggle to render fine strands against backgrounds." },
-      { key: "background_seam",   label: "Background seam or artifact",  info: "Looks for discontinuities or unnatural transitions where the subject meets the background, which can indicate compositing or AI generation." },
+      { key: "lighting_mismatch", label: "Lighting inconsistency",        info: "Checks whether the direction, colour temperature and shadow pattern of the lighting is consistent across the face and background." },
+      { key: "catch_light",       label: "Missing / cloned catch-lights",  info: "Real eyes reflect light sources as unique catch-lights. AI images often clone identical reflections in both eyes or omit them entirely." },
+      { key: "hair_detail",       label: "Hair edge anomaly",              info: "Examines hair boundaries for the characteristic blur or dissolve that occurs when AI models struggle to render fine strands against backgrounds." },
+      { key: "background_seam",   label: "Background seam or artifact",   info: "Looks for discontinuities or unnatural transitions where the subject meets the background, which can indicate compositing or AI generation." },
     ],
   },
   {
@@ -95,7 +57,7 @@ const SIGNAL_GROUPS = [
   },
 ];
 
-const ALL_SIGNALS    = SIGNAL_GROUPS.flatMap(g => g.signals);
+const ALL_SIGNALS        = SIGNAL_GROUPS.flatMap(g => g.signals);
 const DEFAULT_WEIGHTS    = { ai_generation: "med", face_manipulation: "high", forensic_cues: "med", metadata: "low" };
 const DEFAULT_BOOSTS     = { face_swap: true, synthetic_texture: true };
 const DEFAULT_THRESHOLDS = { suspicious: 55, high: 70 };
@@ -108,7 +70,9 @@ const STEPS = [
   { label: "Building report",        detail: "Compiling risk score, signal findings and suspicious region markers" },
 ];
 
-// ── Small reusable components ─────────────────────────────────────────────────
+const toTitleCase = s => s.replace(/\b\w/g, c => c.toUpperCase());
+
+// ── Components ────────────────────────────────────────────────────────────────
 
 function AnimatedEllipsis({ label }) {
   const [dots, setDots] = useState("");
@@ -136,41 +100,90 @@ function InfoIcon({ text, flipDown }) {
 
 function ZoneDot({ z, isClean, activeIdx, idx, setActiveIdx }) {
   const isActive  = activeIdx === idx;
-  const dotColor  = isClean ? "#639922"              : "#E24B4A";
-  const ringColor = isClean ? "rgba(99,153,34,0.35)" : "rgba(226,75,74,0.35)";
-  const calloutBg     = isClean ? "#EAF3DE" : "#FCEBEB";
+  const hasActive = activeIdx !== null;
+  const dotColor      = isClean ? "#639922"              : "#E24B4A";
+  const ringColor     = isClean ? "rgba(99,153,34,0.35)" : "rgba(226,75,74,0.35)";
   const calloutBorder = isClean ? "#C0DD97" : "#F09595";
   const titleColor    = isClean ? "#27500A" : "#A32D2D";
-  const bodyColor     = isClean ? "#3B6D11" : "#791F1F";
-  const flipLeft = z.cx > 55;
-  const flipUp   = z.cy > 55;
+  const pillBg        = isClean ? "rgba(234,243,222,0.92)" : "rgba(252,235,235,0.92)";
+  const pillBorder    = isClean ? "#C0DD97" : "#F09595";
+  const flipLeft = z.cx > 50;
+  const flipUp   = z.cy > 50;
+  const hLen = 100, vLen = 60;
+  const hDir = flipLeft ? -hLen : hLen;
+  const vDir = flipUp   ? -vLen : vLen;
 
   return (
     <div
+      onClick={e => { e.stopPropagation(); setActiveIdx(i => i === idx ? null : idx); }}
       onMouseEnter={() => setActiveIdx(idx)}
       onMouseLeave={() => setActiveIdx(i => i === idx ? null : i)}
-      onClick={() => setActiveIdx(i => i === idx ? null : idx)}
-      style={{ position: "absolute", left: `${z.cx}%`, top: `${z.cy}%`, transform: "translate(-50%, -50%)", zIndex: isActive ? 20 : 5, cursor: "pointer" }}>
+      style={{
+        position: "absolute", left: `${z.cx}%`, top: `${z.cy}%`,
+        transform: "translate(-50%, -50%)",
+        zIndex: isActive ? 30 : 5, cursor: "pointer",
+        opacity: hasActive && !isActive ? 0.15 : 1,
+        transition: "opacity 0.25s",
+      }}>
 
-      <style>{`@keyframes pulse-dot { 0%,100%{transform:scale(1);opacity:0.45} 50%{transform:scale(1.7);opacity:0.15} }`}</style>
-
+      {/* Dot + pulsing ring */}
       <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isActive ? (isClean ? "rgba(99,153,34,0.2)" : "rgba(226,75,74,0.2)") : "transparent", position: "relative" }}>
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1.5px solid ${ringColor}`, animation: "pulse-dot 1.8s ease-in-out infinite", pointerEvents: "none" }} />
         <div style={{ width: 10, height: 10, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
       </div>
 
-      <div style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [flipLeft ? "right" : "left"]: 26, fontSize: 10, fontWeight: 500, color: titleColor, whiteSpace: "nowrap", pointerEvents: "none", textShadow: "0 0 4px #F1EFE8, 0 0 4px #F1EFE8" }}>
-        {z.label}
-      </div>
+      {/* Pill label — only shown when NOT active */}
+      {!isActive && (
+        <div style={{
+          position: "absolute", top: "50%", transform: "translateY(-50%)",
+          [flipLeft ? "right" : "left"]: 20,
+          fontSize: 10, fontWeight: 500,
+          color: isClean ? "#27500A" : "#791F1F",
+          background: pillBg, border: `0.5px solid ${pillBorder}`,
+          borderRadius: 4, padding: "2px 6px",
+          whiteSpace: "nowrap", pointerEvents: "none",
+        }}>
+          {toTitleCase(z.label)}
+        </div>
+      )}
 
+      {/* L-line + callout when active */}
       {isActive && (
         <>
           <svg style={{ position: "absolute", top: "50%", left: "50%", overflow: "visible", pointerEvents: "none", zIndex: 15 }} width="0" height="0">
-            <line x1="0" y1="0" x2={flipLeft ? -110 : 110} y2={flipUp ? -40 : 40} stroke="#B4B2A9" strokeWidth="1" strokeDasharray="4 3" />
+            <style>{`
+              @keyframes draw-h { from{stroke-dashoffset:${hLen}} to{stroke-dashoffset:0} }
+              @keyframes draw-v { from{stroke-dashoffset:${vLen}} to{stroke-dashoffset:0} }
+            `}</style>
+            <line x1="0" y1="0" x2={hDir} y2="0"
+              stroke="#888780" strokeWidth="1.5"
+              strokeDasharray={hLen} strokeDashoffset={hLen}
+              style={{ animation: "draw-h 0.2s ease-out forwards" }} />
+            <line x1={hDir} y1="0" x2={hDir} y2={vDir}
+              stroke="#888780" strokeWidth="1.5"
+              strokeDasharray={vLen} strokeDashoffset={vLen}
+              style={{ animation: "draw-v 0.15s ease-out 0.2s forwards" }} />
+            <circle cx={hDir} cy={vDir} r="3" fill="#888780"
+              style={{ opacity: 0, animation: "fade-callout 0.1s ease-out 0.35s forwards" }} />
           </svg>
-          <div style={{ position: "absolute", [flipLeft ? "right" : "left"]: 30, [flipUp ? "bottom" : "top"]: 30, background: "#fff", border: `1px solid ${calloutBorder}`, borderRadius: 10, padding: "10px 12px", width: 185, zIndex: 20, pointerEvents: "none" }}>
-            <p style={{ fontSize: 14, fontWeight: 600, color: titleColor, margin: "0 0 4px" }}>{z.label.replace(/\b\w/g, c => c.toUpperCase())}</p>
-            <p style={{ fontSize: 13, color: "#2c2c2a", lineHeight: 1.65, margin: 0 }}>{z.detail || z.label}</p>
+
+          {/* Wide rectangular callout */}
+          <div style={{
+            position: "absolute",
+            left: flipLeft ? `${hDir - 230}px` : `${hDir}px`,
+            top:  flipUp   ? `${vDir - 95}px`  : `${vDir}px`,
+            background: "#fff",
+            border: `1px solid ${calloutBorder}`,
+            borderRadius: 8, padding: "10px 14px",
+            width: 230, zIndex: 20, pointerEvents: "none",
+            animation: "fade-callout 0.2s ease-out 0.32s both",
+          }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: titleColor, margin: "0 0 4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {toTitleCase(z.label)}
+            </p>
+            <p style={{ fontSize: 13, color: "#2c2c2a", lineHeight: 1.6, margin: 0 }}>
+              {z.detail || z.label}
+            </p>
           </div>
         </>
       )}
@@ -251,7 +264,6 @@ function GroupCard({ group, color, signals, results }) {
   );
 }
 
-// ── Settings panel ────────────────────────────────────────────────────────────
 function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThresholds, onClose }) {
   const WEIGHT_OPTS = ["low", "med", "high"];
   const pillStyle = (active, level) => {
@@ -269,7 +281,7 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", background: "rgba(44,44,42,0.4)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", maxHeight: "88vh", overflowY: "auto", paddingBottom: 24, maxWidth: 560, width: "100%", margin: "0 auto" }}>
+      <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", maxHeight: "88vh", overflowY: "auto", paddingBottom: 24, maxWidth: 560, width: "100%" }}>
         <div style={{ width: 36, height: 4, background: "#D3D1C7", borderRadius: 99, margin: "10px auto 0" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px 10px", borderBottom: "0.5px solid #F1EFE8" }}>
           <div>
@@ -340,7 +352,6 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
   );
 }
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
 function IconTrash()    { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>; }
 function IconSwap()     { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>; }
 function IconScan()     { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>; }
@@ -455,10 +466,12 @@ export default function App() {
   return (
     <div style={{ background: "#F1EFE8", minHeight: "100vh", padding: "0 0 40px" }}>
       <style>{`
-        @keyframes scanline { 0%{top:-2px} 100%{top:100%} }
-        @keyframes pulsebox { 0%,100%{opacity:0.15} 50%{opacity:0.72} }
-        @keyframes pulse-dot { 0%,100%{transform:scale(1);opacity:0.45} 50%{transform:scale(1.7);opacity:0.15} }
+        @keyframes scanline   { 0%{top:-2px} 100%{top:100%} }
+        @keyframes pulsebox   { 0%,100%{opacity:0.15} 50%{opacity:0.72} }
+        @keyframes pulse-dot  { 0%,100%{transform:scale(1);opacity:0.45} 50%{transform:scale(1.7);opacity:0.15} }
         @keyframes fade-callout { from{opacity:0} to{opacity:1} }
+        @keyframes draw-h { from{stroke-dashoffset:100} to{stroke-dashoffset:0} }
+        @keyframes draw-v { from{stroke-dashoffset:60}  to{stroke-dashoffset:0} }
         .scan-line { position:absolute; left:0; right:0; height:2px; background:rgba(55,138,221,0.8); animation:scanline 1.8s linear infinite; pointer-events:none; }
         .scan-box  { position:absolute; border:1.5px solid rgba(55,138,221,0.65); border-radius:4px; background:rgba(55,138,221,0.1); pointer-events:none; animation:pulsebox 1.4s ease-in-out infinite; }
       `}</style>
@@ -474,7 +487,10 @@ export default function App() {
         <div style={{ maxWidth: 520, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 42, height: 42, background: "#2c2c2a", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1EFE8" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="7" y1="11" x2="15" y2="11" stroke="#378ADD" strokeWidth="2"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1EFE8" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <line x1="7" y1="11" x2="15" y2="11" stroke="#378ADD" strokeWidth="2"/>
+              </svg>
             </div>
             <div>
               <h1 style={{ fontSize: 20, fontWeight: 600, color: "#2c2c2a", margin: 0, letterSpacing: "-0.3px" }}>DeepScan</h1>
@@ -489,6 +505,7 @@ export default function App() {
 
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 16px 0" }}>
 
+        {/* Upload zone */}
         {!imgUrl ? (
           <div onClick={() => fileRef.current.click()} onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={onDrop}
             style={{ border: `1.5px dashed ${drag ? "#378ADD" : "#B4B2A9"}`, borderRadius: 16, padding: "48px 20px", textAlign: "center", cursor: "pointer", background: drag ? "#E6F1FB" : "#e8e7e2", transition: "background 0.15s, border-color 0.15s" }}>
@@ -523,8 +540,7 @@ export default function App() {
 
                 {/* Zone dots */}
                 {!loading && !revealing && showHeat && result?.zones?.length > 0 && (
-                  <div
-                    onClick={() => setActiveZone(null)}
+                  <div onClick={() => setActiveZone(null)}
                     style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "visible" }}>
                     {result.zones.map((z, i) => (
                       <ZoneDot key={i} idx={i} z={z} isClean={isClean} activeIdx={activeZone} setActiveIdx={setActiveZone} />
@@ -535,7 +551,8 @@ export default function App() {
 
               <div style={{ display: "flex", gap: 8 }}>
                 {result && !loading && (
-                  <button onClick={() => { setShowHeat(h => !h); setActiveZone(null); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, padding: "6px 0", cursor: "pointer" }}>
+                  <button onClick={() => { setShowHeat(h => !h); setActiveZone(null); }}
+                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, padding: "6px 0", cursor: "pointer" }}>
                     <IconScan />{showHeat ? "Hide heatmap" : "Show heatmap"}
                   </button>
                 )}
