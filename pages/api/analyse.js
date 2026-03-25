@@ -95,6 +95,7 @@ export default async function handler(req, res) {
     seForm.append("api_secret", process.env.SIGHTENGINE_API_SECRET);
     const seRes  = await fetch("https://api.sightengine.com/1.0/check.json", { method: "POST", body: seForm });
     const seData = await seRes.json();
+    console.log("Sightengine:", JSON.stringify(seData));
     ai = seData?.type?.ai_generated ?? 0.1;
     df = seData?.type?.deepfake     ?? 0.1;
   } catch (err) {
@@ -175,6 +176,7 @@ Rules:
     const claudeData = await claudeRes.json();
     const raw = claudeData?.content?.find(b => b.type === "text")?.text || "{}";
     claudeResult = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    console.log("Claude parsed:", JSON.stringify(claudeResult));
   } catch (err) {
     console.error("Claude error:", err.message);
     claudeResult = {
