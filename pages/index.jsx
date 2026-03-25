@@ -223,9 +223,9 @@ function SettingsPanel({ weights, boosts, thresholds, onWeights, onBoosts, onThr
   const sectionLabel = { fontSize: 9, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "#888780", marginBottom: 8 };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "rgba(44,44,42,0.4)" }}
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", background: "rgba(44,44,42,0.4)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", maxHeight: "88vh", overflowY: "auto", paddingBottom: 24 }}>
+      <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", maxHeight: "88vh", overflowY: "auto", paddingBottom: 24, maxWidth: 560, width: "100%", margin: "0 auto" }}>
         <div style={{ width: 36, height: 4, background: "#D3D1C7", borderRadius: 99, margin: "10px auto 0" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px 10px", borderBottom: "0.5px solid #F1EFE8" }}>
           <div>
