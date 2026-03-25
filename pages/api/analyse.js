@@ -105,7 +105,7 @@ Examine this image carefully and respond ONLY with a valid JSON object in this e
     "gan_fingerprint":   { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "synthetic_texture": { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "face_swap":         { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
-    "face_reenactment":  { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
+    "face_reenactment":  { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence about facial expression or mouth region manipulation visible in this image>" },
     "edge_blending":     { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "skin_smoothing":    { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
     "lighting_mismatch": { "detected": <bool>, "confidence": <int 0–100>, "detail": "<one sentence>" },
