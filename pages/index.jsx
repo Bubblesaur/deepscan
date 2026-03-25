@@ -1,4 +1,42 @@
-"use client";
+function ZoneDot({ z, isClean, activeIdx, idx, setActiveIdx }) {
+  const isActive  = activeIdx === idx;
+  const hasActive = activeIdx !== null;
+  const dotColor  = isClean ? "#639922"              : "#E24B4A";
+  const ringColor = isClean ? "rgba(99,153,34,0.35)" : "rgba(226,75,74,0.35)";
+  const calloutBg     = "#fff";
+  const calloutBorder = isClean ? "#C0DD97" : "#F09595";
+  const titleColor    = isClean ? "#27500A" : "#A32D2D";
+  const flipLeft = z.cx > 55;
+  const flipUp   = z.cy > 55;
+
+  const toTitleCase = s => s.replace(/\b\w/g, c => c.toUpperCase());
+
+  return (
+    <div
+      onMouseEnter={() => setActiveIdx(idx)}
+      onMouseLeave={() => { if (!isActive) return; }}
+      onClick={e => { e.stopPropagation(); setActiveIdx(i => i === idx ? null : idx); }}
+      style={{
+        position: "absolute", left: `${z.cx}%`, top: `${z.cy}%`,
+        transform: "translate(-50%, -50%)",
+        zIndex: isActive ? 20 : 5,
+        cursor: "pointer",
+        opacity: hasActive && !isActive ? 0.15 : 1,
+        transition: "opacity 0.25s",
+      }}>
+
+      <style>{`@keyframes pulse-dot{0%,100%{transform:scale(1);opacity:0.45}50%{transform:scale(1.7);opacity:0.15}}`}</style>
+
+      {/* Dot + ring */}
+      <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isActive ? (isClean ? "rgba(99,153,34,0.2)" : "rgba(226,75,74,0.2)") : "transparent", position: "relative" }}>
+        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1.5px solid ${ringColor}`, animation: "pulse-dot 1.8s ease-in-out infinite", pointerEvents: "none" }} />
+        <div style={{ width: 10, height: 10, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+      </div>
+
+      {/* Pill label — hidden when active */}
+      <div style={{
+        position: "absolute", top: "50%", transform: "translateY(-50%)",
+        [flipLeft ? "right"use client";
 import { useState, useRef, useCallback, useEffect } from "react";
 
 // ── Signal definitions ────────────────────────────────────────────────────────
@@ -131,8 +169,8 @@ function ZoneDot({ z, isClean, activeIdx, idx, setActiveIdx }) {
             <line x1="0" y1="0" x2={flipLeft ? -110 : 110} y2={flipUp ? -40 : 40} stroke="#B4B2A9" strokeWidth="1" strokeDasharray="4 3" />
           </svg>
           <div style={{ position: "absolute", [flipLeft ? "right" : "left"]: 30, [flipUp ? "bottom" : "top"]: 30, background: "#fff", border: `1px solid ${calloutBorder}`, borderRadius: 10, padding: "10px 12px", width: 185, zIndex: 20, pointerEvents: "none" }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: titleColor, margin: "0 0 4px" }}>{z.label}</p>
-            <p style={{ fontSize: 12, color: "#2c2c2a", lineHeight: 1.6, margin: 0 }}>{z.detail || z.label}</p>
+            <p style={{ fontSize: 14, fontWeight: 600, color: titleColor, margin: "0 0 4px" }}>{z.label.replace(/\b\w/g, c => c.toUpperCase())}</p>
+            <p style={{ fontSize: 13, color: "#2c2c2a", lineHeight: 1.65, margin: 0 }}>{z.detail || z.label}</p>
           </div>
         </>
       )}
@@ -419,6 +457,8 @@ export default function App() {
       <style>{`
         @keyframes scanline { 0%{top:-2px} 100%{top:100%} }
         @keyframes pulsebox { 0%,100%{opacity:0.15} 50%{opacity:0.72} }
+        @keyframes pulse-dot { 0%,100%{transform:scale(1);opacity:0.45} 50%{transform:scale(1.7);opacity:0.15} }
+        @keyframes fade-callout { from{opacity:0} to{opacity:1} }
         .scan-line { position:absolute; left:0; right:0; height:2px; background:rgba(55,138,221,0.8); animation:scanline 1.8s linear infinite; pointer-events:none; }
         .scan-box  { position:absolute; border:1.5px solid rgba(55,138,221,0.65); border-radius:4px; background:rgba(55,138,221,0.1); pointer-events:none; animation:pulsebox 1.4s ease-in-out infinite; }
       `}</style>
@@ -483,7 +523,9 @@ export default function App() {
 
                 {/* Zone dots */}
                 {!loading && !revealing && showHeat && result?.zones?.length > 0 && (
-                  <div style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "visible" }}>
+                  <div
+                    onClick={() => setActiveZone(null)}
+                    style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "visible" }}>
                     {result.zones.map((z, i) => (
                       <ZoneDot key={i} idx={i} z={z} isClean={isClean} activeIdx={activeZone} setActiveIdx={setActiveZone} />
                     ))}
