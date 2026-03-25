@@ -272,13 +272,15 @@ export default function App() {
       {/* Header */}
       <div style={{ background: "#fff", borderBottom: "0.5px solid #D3D1C7", padding: "14px 20px 10px" }}>
         <div style={{ maxWidth: 520, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-            <div style={{ width: 22, height: 22, background: "#2c2c2a", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F1EFE8" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 42, height: 42, background: "#2c2c2a", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1EFE8" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="7" y1="11" x2="15" y2="11" stroke="#378ADD" strokeWidth="2"/></svg>
             </div>
-            <h1 style={{ fontSize: 17, fontWeight: 500, color: "#2c2c2a", margin: 0 }}>DeepScan</h1>
+            <div>
+              <h1 style={{ fontSize: 20, fontWeight: 600, color: "#2c2c2a", margin: 0, letterSpacing: "-0.3px" }}>DeepScan</h1>
+              <p style={{ fontSize: 12, color: "#888780", margin: 0 }}>Detect AI-generated images &amp; deepfakes</p>
+            </div>
           </div>
-          <p style={{ fontSize: 12, color: "#888780", margin: 0 }}>Detect AI-generated images &amp; deepfakes</p>
         </div>
       </div>
 
