@@ -126,8 +126,10 @@ Rules:
 - overall_risk_score: weight Sightengine scores heavily (AI ${aiPct}%, deepfake ${dfPct}%) but also factor in your own forensic observations
 - top_concerns: only include if overall_risk_score >= 35, otherwise return []
 - Always return 2–4 zones as dot markers (centre points, not rectangles)
-- Each zone must be spatially distinct — spread across different areas of the image (e.g. top-left face, top-right eye, lower cheek, background)
-- cx is horizontal % from left, cy is vertical % from top — place the dot at the EXACT pixel center of the anomaly (e.g. pupil center for an eye issue, the precise hairline edge for hair anomalies, the center of the affected skin patch). Do NOT place dots in empty space adjacent to the feature.
+- Each zone must be spatially distinct — spread across different areas of the image
+- cx is horizontal % from left (0=left edge, 50=centre, 100=right edge), cy is vertical % from top (0=top edge, 50=middle, 100=bottom edge)
+- For facial images, use these approximate landmark coordinates as reference: left eye cx≈35 cy≈38, right eye cx≈65 cy≈38, nose tip cx≈50 cy≈58, mouth cx≈50 cy≈70, left cheek cx≈25 cy≈55, right cheek cx≈75 cy≈55, forehead cx≈50 cy≈18, chin cx≈50 cy≈82, left hairline cx≈28 cy≈12, right hairline cx≈72 cy≈12
+- Place the dot AT the feature, not beside it — if the anomaly is the left eye, cx should be ~35 and cy ~38
 - detail must be a specific 1-sentence observation about what is visible at that exact spot
 - For each signal, base detected/confidence on what you actually observe in the image
 - detail for each signal must be one specific, concrete sentence about what you see (or don't see) in this image` }
