@@ -464,18 +464,29 @@ export default function App() {
       {showSettings && <SettingsPanel weights={weights} boosts={boosts} thresholds={thresholds} onWeights={setWeights} onBoosts={setBoosts} onThresholds={setThresholds} onClose={() => setShowSettings(false)} />}
 
       {/* Header */}
-      <div style={{ background: "#fff", borderBottom: "0.5px solid #D3D1C7", padding: "14px 24px 10px", flexShrink: 0 }}>
+      <div style={{ background: "#fff", borderBottom: "0.5px solid #D3D1C7", padding: "18px 24px 14px", flexShrink: 0 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 42, height: 42, background: "#2c2c2a", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1EFE8" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="7" y1="11" x2="15" y2="11" stroke="#378ADD" strokeWidth="2"/></svg>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 48, height: 48, background: "#2c2c2a", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F1EFE8" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="7" y1="11" x2="15" y2="11" stroke="#378ADD" strokeWidth="2"/></svg>
             </div>
             <div>
-              <h1 style={{ fontSize: 20, fontWeight: 600, color: "#2c2c2a", margin: 0, letterSpacing: "-0.3px" }}>DeepScan</h1>
-              <p style={{ fontSize: 12, color: "#888780", margin: 0 }}>Detect AI-generated images &amp; deepfakes</p>
+              <h1 style={{ fontSize: 22, fontWeight: 600, color: "#2c2c2a", margin: "0 0 4px", letterSpacing: "-0.3px" }}>DeepScan</h1>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {health === null && <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#D3D1C7", flexShrink: 0 }} />}
+                {health?.status === "ok"       && <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#639922", flexShrink: 0 }} />}
+                {health?.status === "degraded" && <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#EF9F27", flexShrink: 0 }} />}
+                {health?.status === "down"     && <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#E24B4A", flexShrink: 0 }} />}
+                <span style={{ fontSize: 13, color: "#888780" }}>
+                  {health === null       && "Checking services…"}
+                  {health?.status === "ok"       && "All systems operational"}
+                  {health?.status === "degraded" && "Degraded — Sightengine unavailable"}
+                  {health?.status === "down"     && "Service unavailable"}
+                </span>
+              </div>
             </div>
           </div>
-          <button onClick={() => setShowSettings(true)} style={{ width: 36, height: 36, borderRadius: 8, background: "#F1EFE8", border: "0.5px solid #D3D1C7", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <button onClick={() => setShowSettings(true)} style={{ width: 40, height: 40, borderRadius: 9, background: "#F1EFE8", border: "0.5px solid #D3D1C7", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <IconSettings />
           </button>
         </div>
@@ -486,66 +497,7 @@ export default function App() {
         {/* Upload state */}
         {!imgUrl && (
           <>
-            {/* Health check banner */}
-            <div style={{ padding: "16px 24px 0" }}>
-              {health === null && (
-                <div style={{ background: "#fff", border: "0.5px solid #D3D1C7", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#D3D1C7", flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: "#888780" }}>Checking detection services…</span>
-                </div>
-              )}
-              {health?.status === "ok" && (
-                <div style={{ background: "#EAF3DE", border: "0.5px solid #C0DD97", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#639922", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: "#27500A" }}>All systems operational</div>
-                    <div style={{ fontSize: 11, color: "#3B6D11" }}>Sightengine + Claude ready</div>
-                  </div>
-                </div>
-              )}
-              {health?.status === "degraded" && (
-                <div style={{ background: "#FAEEDA", border: "0.5px solid #FAC775", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF9F27", flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: "#633806" }}>Degraded — Sightengine unavailable</div>
-                      <div style={{ fontSize: 11, color: "#854F0B" }}>Scans will rely on Claude visual analysis only</div>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {[{ label: "Sightengine", ok: health.se }, { label: "Claude", ok: health.claude }].map(s => (
-                      <div key={s.label} style={{ flex: 1, background: "#fff", border: `0.5px solid ${s.ok ? "#C0DD97" : "#FAC775"}`, borderRadius: 6, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.ok ? "#639922" : "#EF9F27", flexShrink: 0 }} />
-                        <span style={{ fontSize: 11, color: s.ok ? "#27500A" : "#633806" }}>{s.label}</span>
-                        <span style={{ fontSize: 10, color: s.ok ? "#3B6D11" : "#854F0B", marginLeft: "auto" }}>{s.ok ? "online" : "offline"}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {health?.status === "down" && (
-                <div style={{ background: "#FCEBEB", border: "0.5px solid #F09595", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#E24B4A", flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: "#791F1F" }}>Service unavailable</div>
-                      <div style={{ fontSize: 11, color: "#A32D2D" }}>Scans are paused until services recover</div>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {[{ label: "Sightengine", ok: health.se }, { label: "Claude", ok: health.claude }].map(s => (
-                      <div key={s.label} style={{ flex: 1, background: "#fff", border: `0.5px solid ${s.ok ? "#C0DD97" : "#F09595"}`, borderRadius: 6, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.ok ? "#639922" : "#E24B4A", flexShrink: 0 }} />
-                        <span style={{ fontSize: 11, color: s.ok ? "#27500A" : "#791F1F" }}>{s.label}</span>
-                        <span style={{ fontSize: 10, color: s.ok ? "#3B6D11" : "#A32D2D", marginLeft: "auto" }}>{s.ok ? "online" : "offline"}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div style={{ padding: "8px 24px 40px" }}>
+        <div style={{ padding: "8px 24px 40px" }}>
               {/* File error */}
               {fileError && (
                 <div style={{ background: "#FCEBEB", border: "0.5px solid #F09595", borderRadius: 10, padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "flex-start", gap: 10 }}>
